@@ -148,25 +148,3 @@ Cursor uses VS Code's debugging protocol. Create `.vscode/launch.json`:
   ]
 }
 ```
-
-## Docker Setup (for later phases)
-
-```bash
-# Verify Docker is installed
-docker --version
-docker-compose --version
-```
-
-## AWS CLI (for Bedrock phase)
-
-```bash
-brew install awscli
-aws configure  # Set up your credentials when needed
-```
-
-## Next Steps
-
-1. ✅ Verify all tools are installed
-2. 📝 Start with Week 1 problems
-3. 🧪 Practice debugging with breakpoints
-4. 📚 Keep Go documentation handy: https://go.dev/doc/
