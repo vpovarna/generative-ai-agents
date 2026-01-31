@@ -15,21 +15,11 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 
 1. **Two Sum** - [LeetCode #1](https://leetcode.com/problems/two-sum/)
 2. **Valid Anagram** - [LeetCode #242](https://leetcode.com/problems/valid-anagram/)
-   - Difficulty: Easy
-   - Concepts: Runes (Unicode), maps, string manipulation
-
 3. **Contains Duplicate** - [LeetCode #217](https://leetcode.com/problems/contains-duplicate/)
-   - Difficulty: Easy
-   - Concepts: Maps, sets pattern in Go
-
 4. **Product of Array Except Self** - [LeetCode #238](https://leetcode.com/problems/product-of-array-except-self/)
    - Difficulty: Medium
    - Concepts: Slice operations, multiple passes
-
 5. **Group Anagrams** - [LeetCode #49](https://leetcode.com/problems/group-anagrams/)
-   - Difficulty: Medium
-   - Concepts: Maps with complex keys, sorting strings
-
 6. **Longest Substring Without Repeating Characters** - [LeetCode #3](https://leetcode.com/problems/longest-substring-without-repeating-characters/)
    - Difficulty: Medium
    - Concepts: Sliding window, maps
