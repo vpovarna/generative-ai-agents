@@ -1,7 +1,7 @@
-# Week 2: Go Concurrency Patterns
+# Week 2: Go Advanced Patterns
 
 ## Goal
-Master goroutines, channels, select, sync primitives, and common concurrency patterns used in production systems.
+Master pointers, clojure, system design in go (uber problem), goroutines, channels, select, sync primitives, and common concurrency patterns used in production systems.
 
 ---
 

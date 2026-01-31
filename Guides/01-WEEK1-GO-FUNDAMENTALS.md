@@ -17,16 +17,11 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 2. **Valid Anagram** - [LeetCode #242](https://leetcode.com/problems/valid-anagram/)
 3. **Contains Duplicate** - [LeetCode #217](https://leetcode.com/problems/contains-duplicate/)
 4. **Product of Array Except Self** - [LeetCode #238](https://leetcode.com/problems/product-of-array-except-self/)
-   - Difficulty: Medium
-   - Concepts: Slice operations, multiple passes
 5. **Group Anagrams** - [LeetCode #49](https://leetcode.com/problems/group-anagrams/)
-6. **Longest Substring Without Repeating Characters** - [LeetCode #3](https://leetcode.com/problems/longest-substring-without-repeating-characters/)
+6. **Longest Substring Without Repeating Characters** - [LeetCode #3](https://leetcode.com/problems/longest-substring-without   -repeating-characters/)
    - Difficulty: Medium
    - Concepts: Sliding window, maps
-
 7. **Valid Palindrome** - [LeetCode #125](https://leetcode.com/problems/valid-palindrome/)
-   - Difficulty: Easy
-   - Concepts: Two pointers, rune operations
 
 ### Day 3: Structs, Methods, Interfaces (4 problems)
 
