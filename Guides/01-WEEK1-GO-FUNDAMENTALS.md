@@ -18,9 +18,7 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 3. **Contains Duplicate** - [LeetCode #217](https://leetcode.com/problems/contains-duplicate/)
 4. **Product of Array Except Self** - [LeetCode #238](https://leetcode.com/problems/product-of-array-except-self/)
 5. **Group Anagrams** - [LeetCode #49](https://leetcode.com/problems/group-anagrams/)
-6. **Longest Substring Without Repeating Characters** - [LeetCode #3](https://leetcode.com/problems/longest-substring-without   -repeating-characters/)
-   - Difficulty: Medium
-   - Concepts: Sliding window, maps
+6. **Longest Substring Without Repeating Characters** - [LeetCode #3](https://leetcode.com/problems/longest-substring-without)
 7. **Valid Palindrome** - [LeetCode #125](https://leetcode.com/problems/valid-palindrome/)
 
 ### Day 3: Structs, Methods, Interfaces (4 problems)
@@ -99,27 +97,11 @@ Select problems from various years that teach specific Go concepts. Each problem
 
 ### Day 1-2: String Parsing, File I/O (4 problems)
 
-**Go Focus**: bufio.Scanner, strings package, strconv, file operations
+21. **AoC 2020 Day 1** - https://adventofcode.com/2020/day/1
+22. **AoC 2022 Day 1** - https://adventofcode.com/2022/day/1
+23. **AoC 2021 Day 1** - https://adventofcode.com/2021/day/1
+24. **AoC 2023 Day 1** - https://adventofcode.com/2023/day/1
 
-21. **AoC 2020 Day 1** - [Report Repair](https://adventofcode.com/2020/day/1)
-    - Parse numbers from file
-    - Find pair/triple that sums to 2020
-    - Concepts: File I/O, maps, combinations
-
-22. **AoC 2022 Day 1** - [Calorie Counting](https://adventofcode.com/2022/day/1)
-    - Parse grouped numbers
-    - Find max sums
-    - Concepts: bufio.Scanner, accumulation patterns
-
-23. **AoC 2021 Day 1** - [Sonar Sweep](https://adventofcode.com/2021/day/1)
-    - Count increasing values
-    - Sliding window
-    - Concepts: Slices, iteration patterns
-
-24. **AoC 2023 Day 1** - [Trebuchet?!](https://adventofcode.com/2023/day/1)
-    - Extract digits from strings
-    - Handle spelled-out numbers
-    - Concepts: Runes, string parsing
 
 ### Day 3: Maps, Counting, Frequency (2 problems)
 
