@@ -1,7 +1,7 @@
 package main
 
-import aoc2021day03 "github.com/povarna/generative-ai-with-go/fundamentals/aoc/2021/day03"
+import aoc2022day06 "github.com/povarna/generative-ai-with-go/fundamentals/aoc/2022/day06"
 
 func main() {
-	aoc2021day03.Run()
+	aoc2022day06.Run()
 }

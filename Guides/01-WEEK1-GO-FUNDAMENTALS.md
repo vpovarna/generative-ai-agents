@@ -100,7 +100,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 24. **AoC 2023 Day 1** - https://adventofcode.com/2023/day/1
 
 ### Day 3: Maps, Counting, Frequency (2 problems)
-**Go Focus**: Map patterns, counting algorithms
 
 25. **AoC 2021 Day 3** - [Binary Diagnostic](https://adventofcode.com/2021/day/3)
 26. **AoC 2022 Day 6** - [Tuning Trouble](https://adventofcode.com/2022/day/6)
