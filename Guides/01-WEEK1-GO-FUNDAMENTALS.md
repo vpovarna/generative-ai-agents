@@ -119,10 +119,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 **Go Focus**: Struct design, methods, type definitions
 
 30. **AoC 2021 Day 5** - [Hydrothermal Venture](https://adventofcode.com/2021/day/5)
-    - Line segments on grid
-    - Intersection counting
-    - Concepts: Structs (Point, Line), methods
-
 31. **AoC 2022 Day 4** - [Camp Cleanup](https://adventofcode.com/2022/day/4)
     - Range overlap detection
     - Parsing ranges
