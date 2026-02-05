@@ -26,9 +26,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 **Go Focus**: Pointer receivers, interfaces, custom types
 
 8. **LRU Cache** - [LeetCode #146](https://leetcode.com/problems/lru-cache/)
-   - Difficulty: Medium
-   - Concepts: Structs, methods, pointer receivers, maps + linked list
-
 9. **Min Stack** - [LeetCode #155](https://leetcode.com/problems/min-stack/)
    - Difficulty: Medium
    - Concepts: Stack interface, error handling

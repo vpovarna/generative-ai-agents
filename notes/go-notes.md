@@ -24,4 +24,13 @@ Key Testing Functions:
 A test function must start with Test and should take *testing.T parameter. 
 't' is a pointer to testing.T . It gives you methods to control the test  
 
+Memory Analogy
+Think of it like a house:
+  Passport{...} = The actual house (value)
+  &passport = The address of the house (pointer)
+  *address = Go to that address and get the house (dereference)
 
+TL;DR:
+& = "Get pointer TO this"
+* in type = "This IS a pointer"
+* in expression = "Get value FROM this pointer"
