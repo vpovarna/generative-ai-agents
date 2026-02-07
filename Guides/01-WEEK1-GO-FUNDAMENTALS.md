@@ -116,9 +116,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 
 30. **AoC 2021 Day 5** - [Hydrothermal Venture](https://adventofcode.com/2021/day/5)
 31. **AoC 2022 Day 4** - [Camp Cleanup](https://adventofcode.com/2022/day/4)
-    - Range overlap detection
-    - Parsing ranges
-    - Concepts: Custom types, overlap logic
 32. **AoC 2020 Day 4** - [Passport Processing](https://adventofcode.com/2020/day/4)
 
 ## Day 6: System Design problems (4 problems)
