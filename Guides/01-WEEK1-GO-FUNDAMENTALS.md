@@ -104,7 +104,7 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 ### Day 4: Grid Problems, 2D Slices (3 problems)
 **Go Focus**: 2D slices, coordinate systems
 27. **AoC 2021 Day 4** - [Giant Squid](https://adventofcode.com/2021/day/4)
-28. **AoC 2022 Day 8** - [Treetop Tree House](https://adventofcode.com/2022/day/8)
+28. **AoC 2022 Day 8** - [Treetop Tree House](https://adventofcode.com/2022/day/8) -> TODO
     - Grid visibility checking
     - Multiple directions
     - Concepts: 2D iteration, directions
@@ -136,10 +136,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
     - Bag containment rules
     - Concepts: Recursion, graph representation
 
-35. **AoC 2022 Day 7** - [No Space Left On Device](https://adventofcode.com/2022/day/7)
-    - File system tree
-    - Directory size calculation
-    - Concepts: Tree structures, recursion
 
 ### Day 7: Advanced Parsing, State Machines (5 problems)
 
