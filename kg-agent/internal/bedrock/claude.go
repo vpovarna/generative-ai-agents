@@ -127,6 +127,7 @@ func (c *Client) InvokeModelStream(ctx context.Context, req ClaudeRequest, callb
 		return nil, fmt.Errorf("failed to invoke mode stream: %w", err)
 	}
 
+	// TODO: Test this with channel
 	// Process the stream
 	stream := output.GetStream()
 	defer stream.Close()
@@ -140,14 +141,10 @@ func (c *Client) InvokeModelStream(ctx context.Context, req ClaudeRequest, callb
 		case *types.ResponseStreamMemberChunk:
 			// Parse the chunk - Claude sends different event types
 			var chunkResponse struct {
-				Type  string `json:"type"`
-				Index int    `json:"index"`
 				Delta struct {
-					Type string `json:"type"`
 					Text string `json:"text"`
 				} `json:"delta"`
 				ContentBlock struct {
-					Type string `json:"type"`
 					Text string `json:"text"`
 				} `json:"content_block"`
 				Message struct {
