@@ -14,6 +14,7 @@ import (
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/api"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -63,7 +64,8 @@ func main() {
 		Str("model", modelID).
 		Msg("Bedrock client initialized")
 
-	handler := api.NewHandler(bedrockClient, modelID)
+	rewriter := rewrite.NewRewriter(bedrockClient)
+	handler := api.NewHandler(bedrockClient, rewriter, modelID)
 
 	container := restful.NewContainer()
 

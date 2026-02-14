@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 )
 
 func main() {
@@ -44,13 +45,21 @@ func main() {
 	modelID := os.Getenv("CLAUDE_MODEL_ID")
 
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
-
+	rewriter := rewrite.NewRewriter(bedrockClient)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Query rewrite
+	rewrittenQuery, err := rewriter.RewriteQuery(ctx, finalPrompt)
+	if err != nil {
+		log.Println("Query rewrite failed")
+		// Continue with original query
+		rewrittenQuery = finalPrompt
+	}
+
 	req := bedrock.ClaudeRequest{
-		Prompt:      finalPrompt,
+		Prompt:      rewrittenQuery,
 		MaxTokens:   *maxTokens,
 		Temperature: 0.0,
 	}

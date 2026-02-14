@@ -7,17 +7,20 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
 	bedrockClient *bedrock.Client
+	rewriter      *rewrite.Rewriter
 	modelID       string
 }
 
-func NewHandler(client *bedrock.Client, modelID string) *Handler {
+func NewHandler(client *bedrock.Client, rewriter *rewrite.Rewriter, modelID string) *Handler {
 	return &Handler{
 		bedrockClient: client,
+		rewriter:      rewriter,
 		modelID:       modelID,
 	}
 }
@@ -45,8 +48,17 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 		Msg("Process Query")
 
 	ctx := req.Request.Context()
+
+	// Query rewrite
+	rewrittenQuery, err := h.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
+	if err != nil {
+		log.Error().Err(err).Msg("Query rewrite failed")
+		// Continue with original query
+		rewrittenQuery = queryRequest.Prompt
+	}
+
 	response, err := h.bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
-		Prompt:      queryRequest.Prompt,
+		Prompt:      rewrittenQuery,
 		MaxTokens:   queryRequest.MaxToken,
 		Temperature: queryRequest.Temperature,
 	})
@@ -101,6 +113,14 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// Query rewrite
+	rewrittenQuery, err := h.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
+	if err != nil {
+		log.Error().Err(err).Msg("Query rewrite failed")
+		// Continue with original query
+		rewrittenQuery = queryRequest.Prompt
+	}
+
 	// Send starting event
 	startEvent := SSEEvent{
 		Event: "start",
@@ -115,7 +135,7 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 	}
 
 	response, err := h.bedrockClient.InvokeModelStream(ctx, bedrock.ClaudeRequest{
-		Prompt:      queryRequest.Prompt,
+		Prompt:      rewrittenQuery,
 		MaxTokens:   queryRequest.MaxToken,
 		Temperature: queryRequest.Temperature,
 	}, func(chunk string) error {

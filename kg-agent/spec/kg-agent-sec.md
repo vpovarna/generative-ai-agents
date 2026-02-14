@@ -20,9 +20,8 @@ Phase 2: API Layer
   - Basic error handling and logging
   - Deliverable: REST API that accepts documentation questions and returns Claude responses
 
-Phase 3: Query Write logic and guardrails
+Phase 3: Query Write logic
   - Add query rewriting for better retrieval
-  - Implement guardrails (input/output validation, safety checks)
 
 Phase 4: Knowledge Base & Vector Search  
   - Connect to vector database (e.g., PostgreSQL with pgvector, or Amazon OpenSearch)
@@ -37,6 +36,7 @@ Phase 5: Agent Tools & Reasoning Loop
   - Add ReAct or similar reasoning pattern
   - Deliverable: Agent can decide when to search and use retrieved context
 
-Phase 5: Advanced Features  
+Phase 6: Advanced Features  
+  - Implement guardrails (input/output validation, safety checks)
   - Add conversation memory/history
   - Deliverable: Production-ready documentation agent
