@@ -15,6 +15,8 @@ import (
 
 func main() {
 	filePath := flag.String("filePath", "resources/test-input.txt", "Relative path to the document")
+	chunkSize := flag.Int("chunkSize", 500, "Chunk size")
+	chunkOverlap := flag.Int("chunkOverlap", 100, "Chunk overlap")
 
 	err := godotenv.Load()
 
@@ -41,12 +43,7 @@ func main() {
 
 	defer db.Close()
 
-	if err := db.Ping(ctx); err != nil {
-		log.Fatal().Err(err).Msg("Database ping failed")
-		return
-	}
-
-	log.Info().Msg("Connected successfully")
+	log.Info().Msg("Database connected")
 
 	region := os.Getenv("AWS_REGION")
 	modelID := os.Getenv("CLAUDE_MODEL_ID")
@@ -58,45 +55,17 @@ func main() {
 		return
 	}
 
-	embedder := embedding.NewBedrockEmbedder(bedrockClient.Client)
-
-	// Create document parser
 	parser := ingestion.NewParser()
-	doc, err := parser.ParseFile(*filePath)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to parse input file.")
+	chunker := ingestion.NewChunker(*chunkSize, *chunkOverlap)
+	embedder := embedding.NewBedrockEmbedder(*&bedrockClient.Client)
+
+	// Create pipeline
+	pipeline := ingestion.NewPipeline(parser, chunker, embedder, db.Pool)
+
+	// Ingest document (atomic operation)
+	if err := pipeline.IngestDocument(ctx, *filePath); err != nil {
+		log.Fatal().Err(err).Msg("Ingestion failed")
 	}
 
-	// Insert Document
-	err = db.InsertDocument(ctx, *doc)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to insert document.")
-	}
-	log.Info().Msg("Document inserted successfully")
-
-	// Create chunks
-	chunker := ingestion.NewChunker(50, 10)
-	chunks := chunker.ChunkText(doc.Content)
-	log.Info().Msg("Chunks created successfully")
-
-	// Generate Embeddings
-	var chunkContents []string
-	for _, chunk := range chunks {
-		chunkContents = append(chunkContents, chunk.Content)
-	}
-
-	embeddings, err := embedder.GenerateBatchEmbeddings(ctx, chunkContents)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to generate embeddings.")
-	}
-
-	log.Info().Msg("Embeddings generated successfully")
-
-	err = db.InsertChunks(ctx, doc.ID, chunks, embeddings)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to insert chunks")
-	}
-
-	log.Info().Int("chunks_inserted", len(chunks)).Msg("Ingestion complete!")
-
+	log.Info().Msg("Ingestion successful!")
 }
