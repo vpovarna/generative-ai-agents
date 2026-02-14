@@ -34,5 +34,16 @@ func RegisterRoutes(container *restful.Container, handler *Handler) {
 			Returns(400, "Bad Request", middleware.ErrorResponse{}).
 			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
 
+	ws.
+		Route(ws.POST("/query/stream").
+			To(handler.QueryStream).
+			Doc("Stream Query Claude").
+			Metadata(restfulspec.KeyOpenAPITags, []string{"query"}).
+			Reads(QueryRequest{}).
+			Writes(QueryResponse{}).
+			Returns(200, "OK", QueryResponse{}).
+			Returns(400, "Bad Request", middleware.ErrorResponse{}).
+			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
+
 	container.Add(ws)
 }

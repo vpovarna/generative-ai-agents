@@ -1,6 +1,11 @@
 package api
 
-import "github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+)
 
 type QueryRequest struct {
 	Prompt      string  `json:"prompt" description:"The prompt to send to Claude"`
@@ -48,4 +53,35 @@ func (q *QueryRequest) SetDefaults() {
 	if q.Temperature == 0 {
 		q.Temperature = 0.0
 	}
+}
+
+type SSEEvent struct {
+	Event string      `json:"-"`
+	Data  interface{} `json:"-"`
+}
+
+// SEE Event data structures
+type StreamStartEvent struct {
+	Model string `json:"model"`
+}
+
+type StreamChunkEvent struct {
+	Text string `json:"text"`
+}
+
+type SteamDoneEvent struct {
+	StopReason string `json:"stop_reason"`
+}
+
+type StreamErrorEvent struct {
+	Error string `json:"error"`
+}
+
+func (e SSEEvent) Format() (string, error) {
+	jsonData, err := json.Marshal(e.Data)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("event: %s\ndata: %s\n\n", e.Event, string(jsonData)), nil
 }

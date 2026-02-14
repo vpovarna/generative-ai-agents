@@ -1,7 +1,7 @@
 package api
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
@@ -44,7 +44,7 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 		Float64("temperature", queryRequest.Temperature).
 		Msg("Process Query")
 
-	ctx := context.Background()
+	ctx := req.Request.Context()
 	response, err := h.bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
 		Prompt:      queryRequest.Prompt,
 		MaxTokens:   queryRequest.MaxToken,
@@ -63,6 +63,105 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 	}
 
 	resp.WriteHeaderAndEntity(http.StatusOK, queryResponse)
+}
+
+// Query handles POST /api/v1/query/stream
+func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
+	var queryRequest QueryRequest
+
+	if err := req.ReadEntity(&queryRequest); err != nil {
+		log.Error().Err(err).Msg("Unable to parse query request")
+		middleware.HandleError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	queryRequest.SetDefaults()
+	if err := queryRequest.Validate(); err != nil {
+		middleware.HandleError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	log.Info().
+		Str("prompt", queryRequest.Prompt).
+		Int("max_tokens", queryRequest.MaxToken).
+		Float64("temperature", queryRequest.Temperature).
+		Msg("Process Query Stream")
+
+	ctx := req.Request.Context()
+
+	resp.AddHeader("Content-Type", "text/event-stream")
+	resp.AddHeader("Cache-Control", "no-cache")
+	resp.AddHeader("Connection", "keep-alive")
+	resp.AddHeader("X-Accel-Buffering", "no")
+
+	writer := resp.ResponseWriter
+	flusher, ok := writer.(http.Flusher)
+	if !ok {
+		middleware.HandleError(resp, fmt.Errorf("streaming not supported"), http.StatusInternalServerError)
+		return
+	}
+
+	// Send starting event
+	startEvent := SSEEvent{
+		Event: "start",
+		Data: StreamStartEvent{
+			Model: h.modelID,
+		},
+	}
+
+	if formatEvent, err := startEvent.Format(); err == nil {
+		fmt.Fprint(writer, formatEvent)
+		flusher.Flush()
+	}
+
+	response, err := h.bedrockClient.InvokeModelStream(ctx, bedrock.ClaudeRequest{
+		Prompt:      queryRequest.Prompt,
+		MaxTokens:   queryRequest.MaxToken,
+		Temperature: queryRequest.Temperature,
+	}, func(chunk string) error {
+		// Send chunk event
+		chunkEvent := SSEEvent{
+			Event: "chunk",
+			Data: StreamChunkEvent{
+				Text: chunk,
+			},
+		}
+
+		if formatEvent, ok := chunkEvent.Format(); ok == nil {
+			fmt.Fprint(writer, formatEvent)
+			flusher.Flush()
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		// Send error event
+		errorEvent := SSEEvent{
+			Event: "error",
+			Data: StreamErrorEvent{
+				Error: err.Error(),
+			},
+		}
+
+		if formatEvent, ok := errorEvent.Format(); ok == nil {
+			fmt.Fprint(writer, formatEvent)
+			flusher.Flush()
+		}
+		return
+	}
+
+	// Send end event
+	doneEvent := SSEEvent{
+		Event: "done",
+		Data: SteamDoneEvent{
+			StopReason: response.StopReason,
+		},
+	}
+	if formatEvent, ok := doneEvent.Format(); ok == nil {
+		fmt.Fprint(writer, formatEvent)
+		flusher.Flush()
+	}
 }
 
 // Health handler GET API /api/v1/health
