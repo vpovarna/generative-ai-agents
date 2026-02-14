@@ -2,16 +2,21 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/database"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/ingestion"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	filePath := flag.String("filePath", "resources/test-input.txt", "Relative path to the document")
+
 	err := godotenv.Load()
 
 	if err != nil {
@@ -78,4 +83,18 @@ func main() {
 	log.Info().
 		Int("count", len(embeddings)).
 		Msg("Batch embeddings generated")
+
+	parser := ingestion.NewParser()
+	doc, err := parser.ParseFile(*filePath)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Unable to parse input file.")
+	}
+
+	chunker := ingestion.NewChunker(50, 10)
+	chunks := chunker.ChunkText(doc.Content)
+
+	for _, chunk := range chunks {
+		fmt.Println(chunk)
+	}
+
 }
