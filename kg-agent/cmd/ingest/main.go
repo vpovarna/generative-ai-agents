@@ -59,7 +59,7 @@ func main() {
 
 	parser := ingestion.NewParser()
 	chunker := ingestion.NewChunker(*chunkSize, *chunkOverlap)
-	embedder := embedding.NewBedrockEmbedder(*&bedrockClient.Client)
+	embedder := embedding.NewBedrockEmbedder(bedrockClient.Client)
 
 	// Create pipeline
 	pipeline := ingestion.NewPipeline(parser, chunker, embedder, db.Pool)
