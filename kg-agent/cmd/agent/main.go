@@ -11,7 +11,7 @@ import (
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/go-openapi/spec"
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent/agent"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent/api"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
