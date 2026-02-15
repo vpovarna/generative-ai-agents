@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
@@ -27,7 +28,7 @@ func NewHandler(client *bedrock.Client, rewriter *rewrite.Rewriter, modelID stri
 
 // Query handles POST /api/v1/query
 func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
-	var queryRequest QueryRequest
+	var queryRequest agent.QueryRequest
 
 	if err := req.ReadEntity(&queryRequest); err != nil {
 		log.Error().Err(err).Msg("Failed to parse request body")
@@ -68,7 +69,7 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	queryResponse := QueryResponse{
+	queryResponse := agent.QueryResponse{
 		Content:    response.Content,
 		StopReason: response.StopReason,
 		Model:      h.modelID,
@@ -79,7 +80,7 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 
 // Query handles POST /api/v1/query/stream
 func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
-	var queryRequest QueryRequest
+	var queryRequest agent.QueryRequest
 
 	if err := req.ReadEntity(&queryRequest); err != nil {
 		log.Error().Err(err).Msg("Unable to parse query request")
@@ -122,9 +123,9 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Send starting event
-	startEvent := SSEEvent{
+	startEvent := agent.SSEEvent{
 		Event: "start",
-		Data: StreamStartEvent{
+		Data: agent.StreamStartEvent{
 			Model: h.modelID,
 		},
 	}
@@ -140,9 +141,9 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 		Temperature: queryRequest.Temperature,
 	}, func(chunk string) error {
 		// Send chunk event
-		chunkEvent := SSEEvent{
+		chunkEvent := agent.SSEEvent{
 			Event: "chunk",
-			Data: StreamChunkEvent{
+			Data: agent.StreamChunkEvent{
 				Text: chunk,
 			},
 		}
@@ -157,9 +158,9 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 
 	if err != nil {
 		// Send error event
-		errorEvent := SSEEvent{
+		errorEvent := agent.SSEEvent{
 			Event: "error",
-			Data: StreamErrorEvent{
+			Data: agent.StreamErrorEvent{
 				Error: err.Error(),
 			},
 		}
@@ -172,9 +173,9 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Send end event
-	doneEvent := SSEEvent{
+	doneEvent := agent.SSEEvent{
 		Event: "done",
-		Data: SteamDoneEvent{
+		Data: agent.SteamDoneEvent{
 			StopReason: response.StopReason,
 		},
 	}
@@ -186,7 +187,7 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 
 // Health handler GET API /api/v1/health
 func (h *Handler) Health(req *restful.Request, resp *restful.Response) {
-	healthResponse := HealthResponse{
+	healthResponse := agent.HealthResponse{
 		Status:  "ok",
 		Version: "1.0.0",
 	}
