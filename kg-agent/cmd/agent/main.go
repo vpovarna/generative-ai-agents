@@ -48,7 +48,7 @@ func main() {
 
 	region := os.Getenv("AWS_REGION")
 	modelID := os.Getenv("CLAUDE_MODEL_ID")
-	port := os.Getenv("PORT")
+	port := os.Getenv("AGENT_API_PORT")
 	if port == "" {
 		port = "8081"
 	}
