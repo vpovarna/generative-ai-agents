@@ -22,7 +22,7 @@ func (h *SearchHandler) SemanticSearch(req *restful.Request, resp *restful.Respo
 	var searchRequest SearchRequest
 
 	if err := req.ReadEntity(&searchRequest); err != nil {
-		resp.WriteError(http.StatusBadGateway, err)
+		resp.WriteError(http.StatusBadRequest, err)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (h *SearchHandler) SemanticSearch(req *restful.Request, resp *restful.Respo
 
 	ctx := req.Request.Context()
 
-	searchResults, err := h.service.SematicSearch(ctx, searchRequest.Query, searchRequest.Limit)
+	searchResults, err := h.service.SemanticSearch(ctx, searchRequest.Query, searchRequest.Limit)
 	if err != nil {
 		log.Error().Err(err).Msg("Semantic Search failed")
 		resp.WriteError(http.StatusInternalServerError, err)
@@ -44,7 +44,7 @@ func (h *SearchHandler) SemanticSearch(req *restful.Request, resp *restful.Respo
 		Query:  searchRequest.Query,
 		Result: searchResults,
 		Count:  len(searchResults),
-		Method: "sematic",
+		Method: "semantic",
 	}
 
 	resp.WriteEntity(response)

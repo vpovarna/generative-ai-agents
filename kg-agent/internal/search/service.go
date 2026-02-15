@@ -20,7 +20,7 @@ func NewService(db *database.DB, embedder *embedding.BedrockEmbedder) *Service {
 	}
 }
 
-func (s *Service) SematicSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
+func (s *Service) SemanticSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
 	embeddings, err := s.embedder.GenerateEmbeddings(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to generate embeddings. Error: %w", err)
