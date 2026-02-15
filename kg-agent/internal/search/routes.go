@@ -25,12 +25,12 @@ func RegisterRoutes(container *restful.Container, handler *SearchHandler) {
 		Reads(SearchRequest{}).
 		Writes(SearchResponse{}))
 
-	// // Hybrid search endpoint
-	// ws.Route(ws.POST("/hybrid").
-	// 	To(handler.HybridSearch).
-	// 	Doc("Hybrid search with RRF").
-	// 	Reads(SearchRequest{}).
-	// 	Writes(SearchResponse{}))
+	// Hybrid search endpoint
+	ws.Route(ws.POST("/hybrid").
+		To(handler.HybridSearch).
+		Doc("Hybrid search with RRF").
+		Reads(SearchRequest{}).
+		Writes(SearchResponse{}))
 
 	container.Add(ws)
 }

@@ -79,3 +79,36 @@ func (h *SearchHandler) KeywordSearch(req *restful.Request, resp *restful.Respon
 
 	resp.WriteEntity(response)
 }
+
+// Query handles POST /api/v1/hybrid
+func (h *SearchHandler) HybridSearch(req *restful.Request, resp *restful.Response) {
+	var searchReq SearchRequest
+
+	if err := req.ReadEntity(&searchReq); err != nil {
+		resp.WriteError(http.StatusBadRequest, err)
+		return
+	}
+
+	if searchReq.Limit == 0 {
+		searchReq.Limit = 10
+	}
+
+	ctx := req.Request.Context()
+
+	results, err := h.service.HybridSearch(ctx, searchReq.Query, searchReq.Limit)
+	if err != nil {
+		log.Error().Err(err).Msg("Hybrid search failed")
+		resp.WriteError(http.StatusInternalServerError, err)
+		return
+	}
+
+	response := SearchResponse{
+		Query:  searchReq.Query,
+		Result: results,
+		Count:  len(results),
+		Method: "hybrid",
+	}
+
+	resp.WriteEntity(response)
+
+}
