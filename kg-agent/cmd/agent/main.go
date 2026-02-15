@@ -11,7 +11,7 @@ import (
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/go-openapi/spec"
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/api"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent/agent"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
@@ -65,7 +65,7 @@ func main() {
 		Msg("Bedrock client initialized")
 
 	rewriter := rewrite.NewRewriter(bedrockClient)
-	handler := api.NewHandler(bedrockClient, rewriter, modelID)
+	handler := agent.NewHandler(bedrockClient, rewriter, modelID)
 
 	container := restful.NewContainer()
 
@@ -74,7 +74,7 @@ func main() {
 	container.Filter(middleware.RecoverPanic)
 
 	// register API
-	api.RegisterRoutes(container, handler)
+	agent.RegisterRoutes(container, handler)
 
 	config := restfulspec.Config{
 		WebServices:                   container.RegisteredWebServices(),

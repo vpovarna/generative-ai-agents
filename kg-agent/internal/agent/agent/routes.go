@@ -1,4 +1,4 @@
-package api
+package agent
 
 import (
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
