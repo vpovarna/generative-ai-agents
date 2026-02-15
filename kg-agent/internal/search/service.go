@@ -8,19 +8,19 @@ import (
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
 )
 
-type SearchHandler struct {
+type Service struct {
 	db       *database.DB
 	embedder *embedding.BedrockEmbedder
 }
 
-func NewHandler(db *database.DB, embedder *embedding.BedrockEmbedder) *SearchHandler {
-	return &SearchHandler{
+func NewService(db *database.DB, embedder *embedding.BedrockEmbedder) *Service {
+	return &Service{
 		db:       db,
 		embedder: embedder,
 	}
 }
 
-func (s *SearchHandler) SematicSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
+func (s *Service) SematicSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
 	embeddings, err := s.embedder.GenerateEmbeddings(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to generate embeddings. Error: %w", err)
@@ -48,7 +48,7 @@ func (s *SearchHandler) SematicSearch(ctx context.Context, query string, limit i
 	return searchResults, nil
 }
 
-func (s *SearchHandler) KeywordSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
+func (s *Service) KeywordSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
 	chunks, err := s.db.KeywordSearch(ctx, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to run keyword search on the DB. Error: %w", err)
@@ -71,6 +71,6 @@ func (s *SearchHandler) KeywordSearch(ctx context.Context, query string, limit i
 
 // func (s *SearchHandler) HybridSearch(ctx context.Context, query string, limit int) ([]SearchResult, error)
 
-func (s *SearchHandler) DistanceToScore(distance float64) float64 {
+func (s *Service) DistanceToScore(distance float64) float64 {
 	return 1.0 - distance
 }

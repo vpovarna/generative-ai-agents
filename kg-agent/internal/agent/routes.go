@@ -3,7 +3,6 @@ package agent
 import (
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 )
 
@@ -21,17 +20,17 @@ func RegisterRoutes(container *restful.Container, handler *Handler) {
 			To(handler.Health).
 			Doc("Health check").
 			Metadata(restfulspec.KeyOpenAPITags, []string{"health"}).
-			Writes(agent.HealthResponse{}).
-			Returns(200, "OK", agent.HealthResponse{}))
+			Writes(HealthResponse{}).
+			Returns(200, "OK", HealthResponse{}))
 
 	ws.
 		Route(ws.POST("/query").
 			To(handler.Query).
 			Doc("Query Claude").
 			Metadata(restfulspec.KeyOpenAPITags, []string{"query"}).
-			Reads(agent.QueryRequest{}).
-			Writes(agent.QueryResponse{}).
-			Returns(200, "OK", agent.QueryResponse{}).
+			Reads(QueryRequest{}).
+			Writes(QueryResponse{}).
+			Returns(200, "OK", QueryResponse{}).
 			Returns(400, "Bad Request", middleware.ErrorResponse{}).
 			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
 
@@ -40,9 +39,9 @@ func RegisterRoutes(container *restful.Container, handler *Handler) {
 			To(handler.QueryStream).
 			Doc("Stream Query Claude").
 			Metadata(restfulspec.KeyOpenAPITags, []string{"query"}).
-			Reads(agent.QueryRequest{}).
-			Writes(agent.QueryResponse{}).
-			Returns(200, "OK", agent.QueryResponse{}).
+			Reads(QueryRequest{}).
+			Writes(QueryResponse{}).
+			Returns(200, "OK", QueryResponse{}).
 			Returns(400, "Bad Request", middleware.ErrorResponse{}).
 			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
 

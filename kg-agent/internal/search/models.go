@@ -1,5 +1,10 @@
 package search
 
+type SearchRequest struct {
+	Query string `json:"query"`
+	Limit int    `json:"limit,omitempty" description:"Max results(default: 10)"`
+}
+
 type SearchResult struct {
 	ChunkID    string  `json:"chunk_id"`
 	DocumentID string  `json:"document_id"`
