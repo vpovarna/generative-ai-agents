@@ -13,6 +13,7 @@ Knowledge Graph Agent with Claude for document search and question answering.
 | Keyword Search | Full-text search using PostgreSQL |
 | Hybrid Search | Combined search with RRF ranking |
 | REST API | HTTP endpoints for agent and search |
+| RAG Integration | Context-aware responses with search |
 | Streaming Responses | Server-Sent Events for real-time output |
 
 ## Architecture
@@ -58,8 +59,12 @@ KG_AGENT_VECTOR_DB_DATABASE=kg_agent
 KG_AGENT_VECTOR_DB_SSLMode=disable
 
 # API Ports
-AGENT_API_PORT=8081     # Agent API
-SEARCH_API_PORT=8082    # Search API
+AGENT_API_PORT=8081      # Agent API
+SEARCH_API_PORT=8082     # Search API
+
+# Search Client Configuration
+SEARCH_API_URL=http://localhost:8082
+SEARCH_API_TIMEOUT=15    # seconds
 ```
 
 ## Local Development
@@ -116,40 +121,63 @@ go run cmd/agent/main.go
 
 ## Testing
 
-### Agent API
+### Agent API (with RAG)
 
 ```bash
-# Non-streaming query
+# Non-streaming query with context
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "What is CloudVault?", "max_tokens": 500}'
+  -d '{"prompt": "How do I encrypt my files?", "max_tokens": 500}' | jq .
 
-# Streaming query
+# Example response:
+# {
+#   "content": "Based on the documentation, you can encrypt files using...",
+#   "stop_reason": "end_turn",
+#   "model": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+# }
+
+# Streaming query with context
 curl -X POST http://localhost:8081/api/v1/query/stream \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Explain encryption features", "max_tokens": 500}'
+  -d '{"prompt": "Explain two-factor authentication", "max_tokens": 500}'
 
 # Health check
-curl http://localhost:8081/api/v1/health
+curl http://localhost:8081/api/v1/health | jq .
 ```
 
 ### Search API
 
 ```bash
-# Semantic search
+# Semantic search (vector similarity)
 curl -X POST http://localhost:8082/search/v1/semantic \
   -H "Content-Type: application/json" \
-  -d '{"query": "How do I secure my files?", "limit": 3}'
+  -d '{"query": "How do I secure my files?", "limit": 3}' | jq .
 
-# Keyword search
+# Keyword search (full-text)
 curl -X POST http://localhost:8082/search/v1/keyword \
   -H "Content-Type: application/json" \
-  -d '{"query": "encryption AES-256", "limit": 3}'
+  -d '{"query": "encryption AES-256", "limit": 3}' | jq .
 
-# Hybrid search
+# Hybrid search (combined with RRF ranking)
 curl -X POST http://localhost:8082/search/v1/hybrid \
   -H "Content-Type: application/json" \
-  -d '{"query": "two-factor authentication setup", "limit": 5}'
+  -d '{"query": "two-factor authentication setup", "limit": 5}' | jq .
+
+# Example hybrid search response:
+# {
+#   "query": "two-factor authentication setup",
+#   "result": [
+#     {
+#       "chunk_id": "abc-123",
+#       "document_id": "doc-456",
+#       "content": "To enable 2FA, go to Settings...",
+#       "score": 0.85,
+#       "rank": 1
+#     }
+#   ],
+#   "count": 5,
+#   "method": "hybrid"
+# }
 ```
 
 ## Development Commands
