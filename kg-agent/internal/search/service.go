@@ -152,5 +152,17 @@ func (s *Service) HybridSearch(ctx context.Context, query string, limit int) ([]
 }
 
 func (s *Service) DistanceToScore(distance float64) float64 {
-	return 1.0 - distance
+	// Cosine distance range: 0 (identical) to 2 (opposite)
+	// Convert to similarity score: 1 (best) to 0 (worst)
+	score := 1.0 - distance
+
+	// Clamp to [0, 1] range to avoid negative scores
+	if score < 0.0 {
+		return 0.0
+	}
+	if score > 1.0 {
+		return 1.0
+	}
+
+	return score
 }

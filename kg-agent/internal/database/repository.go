@@ -53,6 +53,7 @@ func (db *DB) GetAllDocs(ctx context.Context) ([]Document, error) {
 	return documentsResponse, nil
 }
 
+// TODO: Add support for cosine and euclidean distance configuration
 func (db *DB) SemanticSearch(ctx context.Context, queryEmbeddings []float32, limit int) ([]Chunk, error) {
 	// Convert embeddings to pgvector embeddings
 	pgvectorEmbeddings := pgvector.NewVector(queryEmbeddings)
@@ -62,7 +63,7 @@ func (db *DB) SemanticSearch(ctx context.Context, queryEmbeddings []float32, lim
 	  id, 
 	  document_id,
 	  content, 
-	  embedding <-> $1 AS distance 
+	  embedding <=> $1 AS distance 
 	FROM document_chunks 
 	ORDER BY distance ASC 
 	LIMIT $2`
