@@ -65,7 +65,8 @@ func main() {
 		Msg("Bedrock client initialized")
 
 	rewriter := rewrite.NewRewriter(bedrockClient)
-	handler := agent.NewHandler(bedrockClient, rewriter, modelID)
+	service := agent.NewService(bedrockClient, rewriter, modelID)
+	handler := agent.NewHandler(service)
 
 	container := restful.NewContainer()
 

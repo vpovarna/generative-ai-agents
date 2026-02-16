@@ -69,7 +69,7 @@ type StreamChunkEvent struct {
 	Text string `json:"text"`
 }
 
-type SteamDoneEvent struct {
+type StreamDoneEvent struct {
 	StopReason string `json:"stop_reason"`
 }
 

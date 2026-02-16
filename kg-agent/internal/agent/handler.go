@@ -5,23 +5,17 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
-	bedrockClient *bedrock.Client
-	rewriter      *rewrite.Rewriter
-	modelID       string
+	service *Service
 }
 
-func NewHandler(client *bedrock.Client, rewriter *rewrite.Rewriter, modelID string) *Handler {
+func NewHandler(service *Service) *Handler {
 	return &Handler{
-		bedrockClient: client,
-		rewriter:      rewriter,
-		modelID:       modelID,
+		service: service,
 	}
 }
 
@@ -49,29 +43,11 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 
 	ctx := req.Request.Context()
 
-	// Query rewrite
-	rewrittenQuery, err := h.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
+	queryResponse, err := h.service.Query(ctx, queryRequest)
 	if err != nil {
-		log.Error().Err(err).Msg("Query rewrite failed")
-		// Continue with original query
-		rewrittenQuery = queryRequest.Prompt
-	}
-
-	response, err := h.bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
-		Prompt:      rewrittenQuery,
-		MaxTokens:   queryRequest.MaxToken,
-		Temperature: queryRequest.Temperature,
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to invoke Claude")
+		log.Error().Err(err).Msg("Failed to query")
 		middleware.HandleError(resp, err, http.StatusInternalServerError)
 		return
-	}
-
-	queryResponse := QueryResponse{
-		Content:    response.Content,
-		StopReason: response.StopReason,
-		Model:      h.modelID,
 	}
 
 	resp.WriteHeaderAndEntity(http.StatusOK, queryResponse)
@@ -113,75 +89,14 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// Query rewrite
-	rewrittenQuery, err := h.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
+	err := h.service.QueryStream(ctx, queryRequest, flusher, writer)
 	if err != nil {
-		log.Error().Err(err).Msg("Query rewrite failed")
-		// Continue with original query
-		rewrittenQuery = queryRequest.Prompt
-	}
-
-	// Send starting event
-	startEvent := SSEEvent{
-		Event: "start",
-		Data: StreamStartEvent{
-			Model: h.modelID,
-		},
-	}
-
-	if formatEvent, err := startEvent.Format(); err == nil {
-		fmt.Fprint(writer, formatEvent)
-		flusher.Flush()
-	}
-
-	response, err := h.bedrockClient.InvokeModelStream(ctx, bedrock.ClaudeRequest{
-		Prompt:      rewrittenQuery,
-		MaxTokens:   queryRequest.MaxToken,
-		Temperature: queryRequest.Temperature,
-	}, func(chunk string) error {
-		// Send chunk event
-		chunkEvent := SSEEvent{
-			Event: "chunk",
-			Data: StreamChunkEvent{
-				Text: chunk,
-			},
-		}
-
-		if formatEvent, ok := chunkEvent.Format(); ok == nil {
-			fmt.Fprint(writer, formatEvent)
-			flusher.Flush()
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		// Send error event
-		errorEvent := SSEEvent{
-			Event: "error",
-			Data: StreamErrorEvent{
-				Error: err.Error(),
-			},
-		}
-
-		if formatEvent, ok := errorEvent.Format(); ok == nil {
-			fmt.Fprint(writer, formatEvent)
-			flusher.Flush()
-		}
+		log.Error().Err(err).Msg("Failed to query stream")
+		middleware.HandleError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	// Send end event
-	doneEvent := SSEEvent{
-		Event: "done",
-		Data: SteamDoneEvent{
-			StopReason: response.StopReason,
-		},
-	}
-	if formatEvent, ok := doneEvent.Format(); ok == nil {
-		fmt.Fprint(writer, formatEvent)
-		flusher.Flush()
-	}
+	flusher.Flush()
 }
 
 // Health handler GET API /api/v1/health
