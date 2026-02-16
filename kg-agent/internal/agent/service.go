@@ -76,6 +76,16 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 		rewrittenQuery = queryRequest.Prompt
 	}
 
+	// Search for relevant context
+	searchResults, err := s.searchClient.HybridSearch(ctx, rewrittenQuery, 5)
+	if err != nil {
+		log.Warn().Err(err).Msg("Search failed, continuing without context")
+		searchResults = nil // Continue without context
+	}
+
+	// Format context and build enhanced prompt
+	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults)
+
 	// Send starting event
 	startEvent := SSEEvent{
 		Event: "start",
@@ -89,8 +99,9 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 		flusher.Flush()
 	}
 
+	// Call Claude with context (streaming)
 	response, err := s.bedrockClient.InvokeModelStream(ctx, bedrock.ClaudeRequest{
-		Prompt:      rewrittenQuery,
+		Prompt:      enhancedPrompt, // ← Changed: use enhanced prompt with context
 		MaxTokens:   queryRequest.MaxToken,
 		Temperature: queryRequest.Temperature,
 	}, func(chunk string) error {
