@@ -8,6 +8,7 @@ Knowledge Graph Agent with Claude for document search and question answering.
 |---------|-------------|
 | AWS Bedrock Integration | Claude API for reasoning and embeddings |
 | Query Rewriting | Automatic query optimization using Claude |
+| Retrieval Strategy | Smart decision: search vs. answer from memory |
 | Document Ingestion | Parse, chunk, and embed documents |
 | Semantic Search | Vector similarity search using pgvector |
 | Keyword Search | Full-text search using PostgreSQL |
@@ -29,11 +30,14 @@ kg-agent/
 ├── internal/
 │   ├── agent/       # Agent HTTP handlers and service
 │   ├── search/      # Search HTTP handlers and service
+│   ├── strategy/    # Retrieval strategy (heuristic + LLM classifier)
 │   ├── conversation/# Conversation memory (Redis)
+│   ├── rewrite/     # Query rewriting service
 │   ├── bedrock/     # AWS Bedrock client
 │   ├── embedding/   # Titan embedding service
 │   ├── database/    # PostgreSQL operations
 │   ├── redis/       # Redis connection
+│   ├── middleware/  # HTTP middleware (logging, errors)
 │   └── ingestion/   # Document processing pipeline
 └── migrations/      # Database schema
 ```
@@ -133,7 +137,97 @@ go run cmd/agent/main.go
 
 ## Testing
 
+### Test Retrieval Strategy (Smart Search Decision)
+
+The agent now intelligently decides when to search documentation vs. answer from conversation history.
+
+**Test 1: Greeting (No Search)**
+```bash
+curl -X POST http://localhost:8081/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello", "max_tokens": 100}' | jq .
+
+# Expected: Agent responds without searching (greeting detected by heuristic)
+```
+
+**Test 2: New Technical Question (Searches)**
+```bash
+curl -X POST http://localhost:8081/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "How do I encrypt my files?", "max_tokens": 500}' | jq .
+
+# Save the session_id from response!
+# Expected: Agent searches documentation and provides detailed answer
+```
+
+**Test 3: Follow-up Question (No Search)**
+```bash
+# Use session_id from Test 2
+curl -X POST http://localhost:8081/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "YOUR_SESSION_ID_HERE",
+    "prompt": "tell me more about that",
+    "max_tokens": 500
+  }' | jq .
+
+# Expected: Agent answers from conversation history without searching
+# (Follow-up detected by heuristic)
+```
+
+**Test 4: Pronoun Reference (No Search)**
+```bash
+# Use same session_id
+curl -X POST http://localhost:8081/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "YOUR_SESSION_ID_HERE",
+    "prompt": "What are the performance implications of it?",
+    "max_tokens": 500
+  }' | jq .
+
+# Expected: Agent resolves "it" from context without searching
+```
+
+**Test 5: New Topic with History (Searches)**
+```bash
+# Use same session_id, but new unrelated topic
+curl -X POST http://localhost:8081/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "YOUR_SESSION_ID_HERE",
+    "prompt": "How do I configure SSL certificates?",
+    "max_tokens": 500
+  }' | jq .
+
+# Expected: Agent searches (new topic not in history)
+```
+
+**Test 6: Complex Ambiguous Query (LLM Classifier)**
+```bash
+# Start new session - ambiguous query
+curl -X POST http://localhost:8081/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "What about version 2 differences?", "max_tokens": 500}' | jq .
+
+# Expected: Heuristic has low confidence, LLM classifier decides
+# (Should search since no context for "version 2")
+```
+
+### Monitor Decision Logic
+
+Watch the logs to see retrieval decisions:
+
+```bash
+# In agent terminal, you'll see:
+# {"level":"info","method":"heuristic","message":"Using heuristic decision"}
+# OR
+# {"level":"info","method":"llm_fallback","message":"Low confidence, using LLM classifier"}
+```
+
 ### Agent API (with RAG)
+
+### Conversation Memory Testing
 
 ```bash
 # First query - creates new session
@@ -204,6 +298,26 @@ curl -X POST http://localhost:8082/search/v1/hybrid \
 #   "count": 5,
 #   "method": "hybrid"
 # }
+```
+
+### Debug Redis Conversations
+
+```bash
+# Connect to Redis
+docker exec -it kg-agent-redis-1 redis-cli
+
+# List all active sessions
+SMEMBERS active_sessions
+
+# Get conversation for a specific session
+GET conversation:550e8400-e29b-41d4-a716-446655440000
+
+# Check TTL (time to live) for a session
+TTL conversation:550e8400-e29b-41d4-a716-446655440000
+
+# Delete a session manually (for testing)
+DEL conversation:550e8400-e29b-41d4-a716-446655440000
+SREM active_sessions 550e8400-e29b-41d4-a716-446655440000
 ```
 
 ## Development Commands

@@ -18,6 +18,7 @@ import (
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/redis"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/strategy"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -116,6 +117,7 @@ func main() {
 
 	rewriter := rewrite.NewRewriter(bedrockClient)
 	searchClient := agent.NewSearchClient(searchConfig)
+	retrievalStrategy := strategy.NewRetrievalStrategy(bedrockClient)
 	conversationStore := conversation.NewRedisConversationStore(redisClient, redisTTL)
 	service := agent.NewService(
 		bedrockClient,
@@ -123,6 +125,7 @@ func main() {
 		rewriter,
 		searchClient,
 		conversationStore,
+		retrievalStrategy,
 	)
 	handler := agent.NewHandler(service)
 

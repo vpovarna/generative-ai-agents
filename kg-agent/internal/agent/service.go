@@ -11,6 +11,7 @@ import (
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/strategy"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,15 +21,23 @@ type Service struct {
 	modelID           string
 	searchClient      *SearchClient
 	conversationStore conversation.ConversationStore
+	retrievalStrategy *strategy.RetrievalStrategy
 }
 
-func NewService(bedrockClient *bedrock.Client, modelID string, rewriter *rewrite.Rewriter, searchClient *SearchClient, conversationStore conversation.ConversationStore) *Service {
+func NewService(
+	bedrockClient *bedrock.Client,
+	modelID string,
+	rewriter *rewrite.Rewriter,
+	searchClient *SearchClient,
+	conversationStore conversation.ConversationStore,
+	retrievalStrategy *strategy.RetrievalStrategy) *Service {
 	return &Service{
 		bedrockClient:     bedrockClient,
 		rewriter:          rewriter,
 		modelID:           modelID,
 		searchClient:      searchClient,
 		conversationStore: conversationStore,
+		retrievalStrategy: retrievalStrategy,
 	}
 }
 
@@ -36,12 +45,18 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	// Get or create session
 	sessionID, conversationHistory := s.getOrCreateSession(ctx, queryRequest)
 
-	// Query rewrite
+	// Decide if we need to search external documentation
+	decision := s.retrievalStrategy.Decide(ctx, queryRequest.Prompt, conversationHistory)
+
+	// Rewrite query
 	rewrittenQuery := s.rewriteQuery(ctx, queryRequest)
+	var searchResults []SearchResult
 
-	// Search for relevant context
-	searchResults := s.search(ctx, rewrittenQuery)
-
+	if decision.ShouldSearch {
+		searchResults = s.search(ctx, rewrittenQuery)
+	} else {
+		searchResults = nil
+	}
 	// Format context and build enhanced prompt
 	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
 
@@ -82,11 +97,19 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	// Get or create session
 	sessionID, conversationHistory := s.getOrCreateSession(ctx, queryRequest)
 
+	// Decide if we need to search external documentation
+	decision := s.retrievalStrategy.Decide(ctx, queryRequest.Prompt, conversationHistory)
+
 	// Query rewrite
 	rewrittenQuery := s.rewriteQuery(ctx, queryRequest)
 
-	// Search for relevant context
-	searchResults := s.search(ctx, rewrittenQuery)
+	// Conditionally search
+	var searchResults []SearchResult
+	if decision.ShouldSearch {
+		searchResults = s.search(ctx, rewrittenQuery)
+	} else {
+		searchResults = nil
+	}
 
 	// Format context and build enhanced prompt
 	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
