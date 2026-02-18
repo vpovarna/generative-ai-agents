@@ -5,17 +5,20 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/guardrails"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
-	service *Service
+	service    *Service
+	guardrails *guardrails.ClaudeValidator
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service *Service, guardrails *guardrails.ClaudeValidator) *Handler {
 	return &Handler{
-		service: service,
+		service:    service,
+		guardrails: guardrails,
 	}
 }
 
@@ -32,6 +35,22 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 	queryRequest.SetDefaults()
 	if err := queryRequest.Validate(); err != nil {
 		middleware.HandleError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	// Validate input against guardrails
+	validation := h.guardrails.Validate(req.Request.Context(), queryRequest.Prompt)
+	if !validation.IsValid {
+		log.Warn().
+			Str("reason", validation.Reason).
+			Str("category", validation.Category).
+			Msg("Request blocked by guardrails")
+
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, map[string]string{
+			"error":    "Request blocked",
+			"reason":   validation.Reason,
+			"category": validation.Category,
+		})
 		return
 	}
 
@@ -66,6 +85,22 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 	queryRequest.SetDefaults()
 	if err := queryRequest.Validate(); err != nil {
 		middleware.HandleError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	// Validate input against guardrails
+	validation := h.guardrails.Validate(req.Request.Context(), queryRequest.Prompt)
+	if !validation.IsValid {
+		log.Warn().
+			Str("reason", validation.Reason).
+			Str("category", validation.Category).
+			Msg("Request blocked by guardrails")
+
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, map[string]string{
+			"error":    "Request blocked",
+			"reason":   validation.Reason,
+			"category": validation.Category,
+		})
 		return
 	}
 
@@ -112,9 +147,9 @@ func (h *Handler) Health(req *restful.Request, resp *restful.Response) {
 // ClearCache handles POST /api/v1/admin/cache/clear
 func (h *Handler) ClearCache(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
-	
+
 	log.Info().Msg("Clearing search cache")
-	
+
 	if err := h.service.ClearSearchCache(ctx); err != nil {
 		log.Error().Err(err).Msg("Failed to clear search cache")
 		middleware.HandleError(resp, fmt.Errorf("unable to clear search cache: %w", err), http.StatusInternalServerError)

@@ -70,8 +70,6 @@ Phase 6: Performance & Production (caching, monitoring, deployment)
   - Add euclidian distance support.
   - Perform search in document id. 
   - Test against a golden dataset. Create an evaluation solution with LLM as judge first metric
-  - Implement pagination on search documents.
-  - Add cobra CLI (extra, good to have for document insert.)
   - Add prometheus
   - Check metrics
   - Add Docker

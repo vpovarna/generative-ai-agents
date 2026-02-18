@@ -16,6 +16,7 @@ import (
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/cache"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/guardrails"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/redis"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
@@ -121,6 +122,7 @@ func main() {
 		}
 	}
 
+	guardrailsValidator := guardrails.NewClaudeValidator(miniClient)
 	rewriter := rewrite.NewRewriter(miniClient)
 	searchClient := agent.NewSearchClient(searchConfig)
 	retrievalStrategy := strategy.NewRetrievalStrategy(miniClient)
@@ -136,7 +138,7 @@ func main() {
 		retrievalStrategy,
 		searchCache,
 	)
-	handler := agent.NewHandler(service)
+	handler := agent.NewHandler(service, guardrailsValidator)
 
 	container := restful.NewContainer()
 
