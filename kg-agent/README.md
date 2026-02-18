@@ -10,7 +10,7 @@ Knowledge Graph Agent with Claude for document search and question answering.
 | Model Selection | Automatic model choice (Haiku for simple, Sonnet for complex) |
 | Query Rewriting | Automatic query optimization using Claude |
 | Retrieval Strategy | Smart decision: search vs. answer from memory |
-| Guardrails | Claude-based content safety validation |
+| Guardrails | BanWords + Claude-based content safety validation |
 | Redis Search Caching | 30-min cache for search results (10x faster repeat queries) |
 | Document Ingestion | Parse, chunk, and embed documents |
 | Semantic Search | Vector similarity search using pgvector |
@@ -33,7 +33,7 @@ kg-agent/
 ├── internal/
 │   ├── agent/       # Agent HTTP handlers and service
 │   ├── search/      # Search HTTP handlers and service
-│   ├── guardrails/  # Content safety validation (Claude-based)
+│   ├── guardrails/  # Content safety validation. BanWords check + Claude
 │   ├── cache/       # Redis search result caching
 │   ├── strategy/    # Retrieval strategy (heuristic + LLM classifier)
 │   ├── conversation/# Conversation memory (Redis)
