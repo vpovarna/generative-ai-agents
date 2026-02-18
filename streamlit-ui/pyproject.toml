@@ -1,0 +1,10 @@
+[project]
+name = "streamlit-ui"
+version = "0.1.0"
+description = "Streamlit UI for KG Agent"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.30.0",
+    "requests>=2.31.0",
+    "sseclient-py>=1.8.0",
+]
