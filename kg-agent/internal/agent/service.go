@@ -339,3 +339,8 @@ func (s *Service) generateCacheKey(query string, searchType string, limit int) s
 	hash := sha256.Sum256([]byte(input))
 	return fmt.Sprintf("%x", hash)
 }
+
+// ClearSearchCache clears all cached search results
+func (s *Service) ClearSearchCache(ctx context.Context) error {
+	return s.searchCache.Clear(ctx)
+}

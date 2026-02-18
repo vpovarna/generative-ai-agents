@@ -108,3 +108,19 @@ func (h *Handler) Health(req *restful.Request, resp *restful.Response) {
 
 	resp.WriteHeaderAndEntity(http.StatusOK, healthResponse)
 }
+
+// ClearCache handles POST /api/v1/admin/cache/clear
+func (h *Handler) ClearCache(req *restful.Request, resp *restful.Response) {
+	ctx := req.Request.Context()
+	
+	log.Info().Msg("Clearing search cache")
+	
+	if err := h.service.ClearSearchCache(ctx); err != nil {
+		log.Error().Err(err).Msg("Failed to clear search cache")
+		middleware.HandleError(resp, fmt.Errorf("unable to clear search cache: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	log.Info().Msg("Search cache cleared successfully")
+	resp.WriteHeaderAndEntity(http.StatusOK, map[string]string{"status": "cache cleared"})
+}

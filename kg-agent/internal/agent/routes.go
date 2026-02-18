@@ -46,5 +46,14 @@ func RegisterRoutes(container *restful.Container, handler *Handler) {
 			Returns(400, "Bad Request", middleware.ErrorResponse{}).
 			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
 
+	// Admin: Clear cache endpoint
+	ws.
+		Route(ws.POST("/admin/cache/clear").
+			To(handler.ClearCache).
+			Doc("Clear search result cache").
+			Metadata(restfulspec.KeyOpenAPITags, []string{"admin"}).
+			Returns(200, "OK", map[string]string{}).
+			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
+
 	container.Add(ws)
 }
