@@ -1,0 +1,76 @@
+# Real-Time Evaluation Agent – Spec (MVP)
+
+## Goal
+
+Build a minimal evaluation service that:
+- Consumes agent responses (query, context, answer)
+- Uses LLM-as-Judge to score them
+- Computes a structured confidence score
+
+Goal: Eval agent using streaming (Kafka), backpressure, full metric pluggability.
+
+---
+
+# Phase 1 – Core LLM Evaluation Engine (MVP)
+
+## Objective
+Create a standalone evaluation engine that scores a single agent response using LLM-as-judge.
+
+## Tasks (mandatory)
+
+- Define evaluation **input schema** (query, context, answer; traces optional).
+- Define evaluation **output schema** (groundedness, correctness, risk, confidence; each 0–1).
+- Design **judge prompt template** for scoring.
+- Implement **LLM-as-judge call** abstraction.
+- Implement **structured JSON output** parsing from judge response.
+- Add **retry logic** for malformed judge responses.
+- Add **deterministic scoring rubric** (0–1 per metric).
+- **Combine metrics** into final confidence score (e.g. weighted average).
+- Create **unit tests** with mocked LLM responses.
+
+---
+
+# Phase 2 – Minimal Multi-Metric Model
+
+## Objective
+Confidence score from a small, fixed set of metrics (no pluggable framework yet).
+
+## Metrics (LLM-based)
+
+- **Groundedness** (answer supported by context).
+- **Correctness** (answer addresses query).
+- **Risk** (hallucination / policy concern).
+
+## Tasks (mandatory)
+
+- Implement the three metrics above (single judge call or one prompt with three scores).
+- **Weighted aggregation** into final confidence (fixed weights OK for MVP).
+- **Store per-metric breakdown** in result.
+- Add **evaluation version** and **scoring metadata** (model, prompt version) in result.
+
+---
+
+# Phase 3 – Evaluation HTTP Service (MVP)
+
+## Objective
+Wrap the evaluator in an HTTP service so it can be called by other systems.
+
+## Tasks (mandatory)
+
+- Build HTTP endpoint **`POST /evaluate`**.
+- **Validate** request payload against input schema.
+- Run **evaluator pipeline** and return **structured JSON** response.
+- Add **request ID** for tracing.
+- Add **timeout** for LLM calls.
+- **Graceful shutdown** (drain in-flight requests).
+- **Configuration** via environment variables (e.g. model, API key, timeouts).
+
+---
+
+# Out of MVP scope (later phases)
+
+- **Phase 4 – Streaming (Kafka):** consumer, topics, DLQ, event versioning.
+- **Phase 5 – Backpressure & concurrency:** worker pool, circuit breaker, throttling, queue depth.
+- **Phase 1/2 extras:** hallucination-only prompt variant, explanation field, raw response logging, token/latency tracking, configurable temperature, batch offline script, config-based weight tuning, threshold/risk classification, confidence calibration.
+
+These can be added once the MVP is running in production or under load.
