@@ -66,10 +66,13 @@ Phase 6: Performance & Production (caching, monitoring, deployment)
   - Redis caching (persistent cache for search results)
   - Cache invalidation strategy
   - Implement guardrails (input/output validation, safety checks). Check against ban words. Implement a hybrid validator: static rules + Claude. 
+  - Evaluation. Test against a golden dataset.
+
+ Improvements: 
+  - Batch insert in DB and batch generation.
   - Include traces in the response. Like Rewrite query, decision output, and what ever you think is important.
   - Add euclidian distance support.
-  - Perform search in document id. 
-  - Test against a golden dataset. Create an evaluation solution with LLM as judge first metric
+  - Perform search in document id. Filter by document id
   - Add prometheus
   - Check metrics
   - Add Docker
