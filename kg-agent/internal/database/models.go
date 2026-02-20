@@ -16,5 +16,6 @@ type Chunk struct {
 	DocumentID string
 	Content    string
 	Distance   float64
+	Metadata   map[string]string
 	Rank       float64
 }

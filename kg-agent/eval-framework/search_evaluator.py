@@ -81,7 +81,7 @@ class SearchEvaluator:
             returned_ids = []
 
             for j, result in enumerate(search_results):
-                returned_ids.append(result.get('chunk_id', 'unknown'))
+                returned_ids.append(result.get('metadata', {}).get('chunk_id', 'unknown'))
                 if result.get('chunk_id') == expected_chunk_id:
                     found = True
                     rank = j + 1    

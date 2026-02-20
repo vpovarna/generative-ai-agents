@@ -63,6 +63,7 @@ func (db *DB) SemanticSearch(ctx context.Context, queryEmbeddings []float32, lim
 	  id, 
 	  document_id,
 	  content, 
+	  metadata,
 	  embedding <=> $1 AS distance 
 	FROM document_chunks 
 	ORDER BY distance ASC 
@@ -80,7 +81,7 @@ func (db *DB) SemanticSearch(ctx context.Context, queryEmbeddings []float32, lim
 	for rows.Next() {
 		var chunk Chunk
 
-		if err := rows.Scan(&chunk.Id, &chunk.DocumentID, &chunk.Content, &chunk.Distance); err != nil {
+		if err := rows.Scan(&chunk.Id, &chunk.DocumentID, &chunk.Content, &chunk.Metadata, &chunk.Distance); err != nil {
 			return nil, fmt.Errorf("Failed to scan id: %w", err)
 		}
 
@@ -101,6 +102,7 @@ func (db *DB) KeywordSearch(ctx context.Context, userQuery string, limit int) ([
 			id,
 			document_id,
 			content,
+			metadata,
 			ts_rank(content_tsvector, plainto_tsquery('english', $1)) AS rank
 		FROM document_chunks
 		WHERE content_tsvector @@ plainto_tsquery('english', $1)
@@ -118,7 +120,7 @@ func (db *DB) KeywordSearch(ctx context.Context, userQuery string, limit int) ([
 	for rows.Next() {
 		var chunk Chunk
 
-		err := rows.Scan(&chunk.Id, &chunk.DocumentID, &chunk.Content, &chunk.Rank)
+		err := rows.Scan(&chunk.Id, &chunk.DocumentID, &chunk.Content, &chunk.Metadata, &chunk.Rank)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}

@@ -43,6 +43,7 @@ func (s *Service) SemanticSearch(ctx context.Context, query string, limit int) (
 				Content:    chunk.Content,
 				Score:      s.DistanceToScore(chunk.Distance),
 				Rank:       i + 1, // Position of the chunk in the result
+				Metadata:   chunk.Metadata,
 			})
 	}
 
@@ -63,6 +64,7 @@ func (s *Service) KeywordSearch(ctx context.Context, query string, limit int) ([
 			DocumentID: chunk.DocumentID,
 			Content:    chunk.Content,
 			Score:      chunk.Rank,
+			Metadata:   chunk.Metadata,
 			Rank:       i + 1,
 		})
 	}

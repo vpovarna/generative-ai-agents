@@ -11,6 +11,7 @@ type SearchResult struct {
 	Content    string  `json:"content"`
 	Score      float64 `json:"score"`
 	Rank       int     `json:"rank"`
+	Metadata   map[string]string `json:"metadata"`
 }
 
 type SearchResponse struct {
