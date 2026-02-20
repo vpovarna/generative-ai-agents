@@ -1,7 +1,11 @@
 
+import random
 import requests
 from typing import List, Dict
 import json
+
+
+RANDOM_SEED = 42
 
 
 class SearchEvaluator:
@@ -11,12 +15,13 @@ class SearchEvaluator:
 
         with open(test_data_path, 'r') as f:
             all_data = json.load(f)
-            self.test_data = all_data[:sample_size]
+            rng = random.Random(RANDOM_SEED)
+            self.test_data = rng.sample(all_data, min(sample_size, len(all_data)))
 
-        print(f"Loaded {len(self.test_data)} test cases")
+        print(f"Loaded {len(self.test_data)} test cases (seed={RANDOM_SEED})")
 
     def run_evaluation(self):
-        search_types = ['semantic', 'keyword', 'hybrid']
+        search_types = ['semantic']
 
         all_results = {}
 
@@ -81,8 +86,9 @@ class SearchEvaluator:
             returned_ids = []
 
             for j, result in enumerate(search_results):
-                returned_ids.append(result.get('metadata', {}).get('chunk_id', 'unknown'))
-                if result.get('chunk_id') == expected_chunk_id:
+                returned_chunk_id = result.get('metadata', {}).get('chunk_id', 'unknown')
+                returned_ids.append(returned_chunk_id)
+                if returned_chunk_id == expected_chunk_id:
                     found = True
                     rank = j + 1    
                     break
@@ -148,7 +154,7 @@ if __name__ == "__main__":
     search_evaluator = SearchEvaluator(
         search_api_url = 'http://localhost:8082/search/v1',
         test_data_path = '.data/natural_questions_prepared.json',
-        sample_size = 10
+        sample_size = 500
     )
 
     search_evaluator.run_evaluation()

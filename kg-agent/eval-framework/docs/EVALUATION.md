@@ -53,440 +53,206 @@ Transform each row into:
 
 **Script:** `scripts/eval_search.py`
 
-```python
-import requests
-import json
-from typing import List, Dict
-from collections import defaultdict
+### Test Plan
+### Step 1 (Evaluation):
+  Insert:  1,000 chunks  (no index)
+  Queries: 200 questions (random sample with seed)
+  Goal:    Establish baseline Recall@1, Recall@5, MRR
 
-class SearchEvaluator:
-    def __init__(self, search_api_url: str, test_data_path: str, sample_size: int = 1000):
-        self.search_api_url = search_api_url
-        self.sample_size = sample_size
-        
-        # Load test data
-        with open(test_data_path, 'r') as f:
-            all_data = json.load(f)
-            self.test_data = all_data[:sample_size]
-        
-        print(f"Loaded {len(self.test_data)} test cases")
-    
-    def evaluate_search(self, search_type: str, limit: int = 5) -> List[Dict]:
-        """
-        Evaluate a specific search type.
-        
-        Args:
-            search_type: 'semantic', 'keyword', or 'hybrid'
-            limit: Number of results to retrieve
-        
-        Returns:
-            List of result dictionaries
-        """
-        results = []
-        
-        for i, qa in enumerate(self.test_data):
-            question = qa['metadata']['question']
-            expected_chunk_id = qa['chunk_id']
-            
-            # Call search API
-            try:
-                response = requests.post(
-                    f'{self.search_api_url}/{search_type}',
-                    json={'query': question, 'limit': limit},
-                    timeout=10
-                )
-                response.raise_for_status()
-                search_results = response.json()['result']
-            except Exception as e:
-                print(f"Error on question {i}: {e}")
-                search_results = []
-            
-            # Find if expected chunk is in results
-            found = False
-            rank = -1
-            returned_ids = []
-            
-            for j, result in enumerate(search_results):
-                returned_ids.append(result.get('chunk_id', 'unknown'))
-                if result.get('chunk_id') == expected_chunk_id:
-                    found = True
-                    rank = j + 1
-                    break
-            
-            results.append({
-                'question_id': qa['metadata']['question_id'],
-                'question': question,
-                'expected_chunk_id': expected_chunk_id,
-                'found': found,
-                'rank': rank,
-                'returned_chunk_ids': returned_ids
-            })
-            
-            if (i + 1) % 100 == 0:
-                print(f"  Evaluated {i + 1}/{len(self.test_data)} questions...")
-        
-        return results
-    
-    def calculate_metrics(self, results: List[Dict]) -> Dict:
-        """
-        Calculate evaluation metrics.
-        
-        Returns:
-            Dictionary with recall@1, recall@5, and MRR
-        """
-        total = len(results)
-        
-        recall_at_1 = sum(1 for r in results if r['rank'] == 1) / total
-        recall_at_5 = sum(1 for r in results if r['found']) / total
-        
-        # Mean Reciprocal Rank
-        mrr = sum(1/r['rank'] for r in results if r['rank'] > 0) / total
-        
-        # Additional stats
-        not_found = sum(1 for r in results if not r['found'])
-        avg_rank = sum(r['rank'] for r in results if r['rank'] > 0) / max(1, (total - not_found))
-        
-        return {
-            'total_questions': total,
-            'recall_at_1': recall_at_1,
-            'recall_at_5': recall_at_5,
-            'mrr': mrr,
-            'not_found': not_found,
-            'not_found_pct': not_found / total,
-            'avg_rank_when_found': avg_rank
-        }
-    
-    def run_full_evaluation(self):
-        """
-        Run evaluation for all search types and print comparison.
-        """
-        search_types = ['semantic', 'keyword', 'hybrid']
-        all_results = {}
-        
-        for search_type in search_types:
-            print(f"\n{'='*60}")
-            print(f"Evaluating {search_type.upper()} search...")
-            print(f"{'='*60}")
-            
-            results = self.evaluate_search(search_type, limit=5)
-            metrics = self.calculate_metrics(results)
-            
-            all_results[search_type] = {
-                'results': results,
-                'metrics': metrics
-            }
-            
-            # Print metrics
-            print(f"\n📊 {search_type.upper()} SEARCH METRICS:")
-            print(f"  Recall@1:  {metrics['recall_at_1']:.2%}")
-            print(f"  Recall@5:  {metrics['recall_at_5']:.2%}")
-            print(f"  MRR:       {metrics['mrr']:.3f}")
-            print(f"  Not Found: {metrics['not_found']} ({metrics['not_found_pct']:.1%})")
-            print(f"  Avg Rank:  {metrics['avg_rank_when_found']:.2f}")
-        
-        # Print comparison
-        print(f"\n{'='*60}")
-        print("📈 COMPARISON")
-        print(f"{'='*60}")
-        print(f"{'Metric':<20} {'Semantic':>12} {'Keyword':>12} {'Hybrid':>12}")
-        print("-" * 60)
-        
-        for metric in ['recall_at_1', 'recall_at_5', 'mrr']:
-            values = [all_results[st]['metrics'][metric] for st in search_types]
-            if metric == 'mrr':
-                print(f"{metric.upper():<20} {values[0]:>12.3f} {values[1]:>12.3f} {values[2]:>12.3f}")
-            else:
-                print(f"{metric.upper():<20} {values[0]:>11.1%} {values[1]:>11.1%} {values[2]:>11.1%}")
-        
-        # Save results to file
-        with open('evaluation_results.json', 'w') as f:
-            json.dump(all_results, f, indent=2)
-        
-        print(f"\n✅ Results saved to: evaluation_results.json")
-        
-        return all_results
-
-if __name__ == "__main__":
-    evaluator = SearchEvaluator(
-        search_api_url='http://localhost:8082/search/v1',
-        test_data_path='data/natural_questions_prepared.json',
-        sample_size=1000  # Test on 1000 questions
-    )
-    
-    evaluator.run_full_evaluation()
-```
-
-**Execution:**
-```bash
-cd kg-agent
-python scripts/eval_search.py
-```
-
----
-
-## Evaluation Metrics
-
-### Primary Metrics
-
-#### 1. **Recall@1** (Top-1 Accuracy)
-```
-Recall@1 = (# questions where correct chunk is ranked #1) / (total questions)
-```
-
-**Interpretation:**
-- **>80%**: Excellent - Most queries get the right answer immediately
-- **70-80%**: Good - Acceptable for most use cases
-- **<70%**: Needs improvement - Too many wrong results at the top
-
-**Target:** >75%
-
-#### 2. **Recall@5** (Top-5 Coverage)
-```
-Recall@5 = (# questions where correct chunk is in top 5) / (total questions)
-```
-
-**Interpretation:**
-- **>95%**: Excellent - Nearly all relevant chunks are retrieved
-- **90-95%**: Good - Most queries succeed
-- **85-90%**: Acceptable - Room for improvement
-- **<85%**: Poor - Search needs tuning
-
-**Target:** >90%
-
-#### 3. **Mean Reciprocal Rank (MRR)**
-```
-MRR = Average of (1 / rank) for all questions
-
-Example:
-  Q1: Correct at rank 1 → 1/1 = 1.000
-  Q2: Correct at rank 3 → 1/3 = 0.333
-  Q3: Not found (rank ∞) → 0.000
-  MRR = (1.000 + 0.333 + 0.000) / 3 = 0.444
-```
-
-**Interpretation:**
-- **>0.85**: Excellent - Correct answers are typically #1 or #2
-- **0.75-0.85**: Good - Decent ranking quality
-- **0.60-0.75**: Acceptable - Correct answers often in positions 2-3
-- **<0.60**: Poor - Ranking needs improvement
-
-**Target:** >0.75
-
-### Secondary Metrics
-
-#### 4. **Not Found Rate**
-```
-Not Found = (# questions where correct chunk not in top 5) / (total questions)
-```
-
-**Target:** <10%
-
-#### 5. **Average Rank (When Found)**
-```
-Avg Rank = Average position of correct chunk (for queries where it's found)
-```
-
-**Target:** <2.5
-
----
-
-## Expected Results
-
-### Baseline Performance Targets
-
-| Search Type | Recall@1 | Recall@5 | MRR | Notes |
-|-------------|----------|----------|-----|-------|
-| **Semantic** | 65-75% | 85-90% | 0.70-0.75 | Vector embeddings capture meaning |
-| **Keyword** | 50-65% | 75-85% | 0.60-0.70 | Works for exact term matches |
-| **Hybrid** | **75-85%** | **90-95%** | **0.75-0.85** | Best of both worlds |
-
-**Key Insight:** Hybrid search should outperform individual methods by 5-10% on all metrics.
-
-### Success Criteria
-
-✅ **Minimum Acceptable:**
-- Hybrid Recall@5: >90%
-- Hybrid MRR: >0.75
-
-✅ **Good Performance:**
-- Hybrid Recall@1: >75%
-- Hybrid Recall@5: >92%
-- Hybrid MRR: >0.80
-
-✅ **Excellent Performance:**
-- Hybrid Recall@1: >80%
-- Hybrid Recall@5: >95%
-- Hybrid MRR: >0.85
-
----
-
-## Evaluation Output
-
-### Console Output Example
-
-```
-============================================================
-Evaluating HYBRID search...
-============================================================
-  Evaluated 100/1000 questions...
-  Evaluated 200/1000 questions...
-  ...
-  Evaluated 1000/1000 questions...
-
-📊 HYBRID SEARCH METRICS:
-  Recall@1:  78.3%
-  Recall@5:  93.1%
-  MRR:       0.823
-  Not Found: 69 (6.9%)
-  Avg Rank:  2.12
-
-============================================================
-📈 COMPARISON
-============================================================
-Metric               Semantic     Keyword      Hybrid
-------------------------------------------------------------
-RECALL_AT_1            72.5%        58.3%        78.3%
-RECALL_AT_5            88.2%        79.4%        93.1%
-MRR                    0.762        0.684        0.823
-
-✅ Results saved to: evaluation_results.json
-```
-
-### JSON Output Structure
-
-**File:** `evaluation_results.json`
-
+#### Semantic Search Results:
 ```json
 {
-  "semantic": {
-    "metrics": {
-      "total_questions": 1000,
-      "recall_at_1": 0.725,
-      "recall_at_5": 0.882,
-      "mrr": 0.762,
-      "not_found": 118,
-      "not_found_pct": 0.118,
-      "avg_rank_when_found": 2.34
-    },
-    "results": [
-      {
-        "question_id": "1",
-        "question": "which is the most common use of opt-in e-mail marketing",
-        "expected_chunk_id": "nq_000001",
-        "found": true,
-        "rank": 1,
-        "returned_chunk_ids": ["nq_000001", "nq_004523", "nq_002341", ...]
-      }
-    ]
-  },
-  "keyword": {...},
-  "hybrid": {...}
+    "semantic":
+    {
+        "recall_at_1": 0.88,
+        "recall_at_5": 0.955,
+        "mrr": 0.9158333333333333,
+        "precision": 0.9158333333333333,
+        "f1_score": 0.8975591647331785
+    }
 }
 ```
 
----
+#### Notes:
+**Recall@1** = 0.88 → 88% of the time, the correct chunk is the very first result. For a RAG system, this is ideal, the LLM gets the right context immediately without needing to process noise from lower-ranked results.  
 
-## Troubleshooting
+**Recall@5** = 0.955 → Only 4.5% of questions (about 9 out of 200) completely failed to retrieve the correct chunk in the top 5. These are your hard failure cases worth investigating.  
 
-### Low Recall@5 (<85%)
+**MRR** ≈ 0.916 means the average correct rank is between 1 and 2:
+  rank 1 → 1/1 = 1.000
+  rank 2 → 1/2 = 0.500
+  rank 3 → 1/3 = 0.333
 
-**Possible causes:**
-1. **Embedding quality issues**
-   - Check: Are embeddings being generated correctly?
-   - Solution: Verify Bedrock Titan model configuration
+A score of 0.916 means most results land at rank 1,
+with very few pushing into rank 2 or 3.
 
-2. **Search query not matching content**
-   - Check: Compare question text vs long_answer text
-   - Solution: Ensure proper text preprocessing
-
-3. **Index corruption**
-   - Check: Are all chunks indexed in PostgreSQL?
-   - Solution: Re-run ingestion
-
-### Low MRR (<0.70) but High Recall@5
-
-**Diagnosis:** Correct chunks are found but ranked poorly.
-
-**Possible causes:**
-1. **RRF weights not optimized**
-   - Solution: Tune RRF k-parameter or semantic/keyword weights
-
-2. **Distance calculation issues**
-   - Check: Are cosine distances properly normalized?
-   - Solution: Verify `DistanceToScore` function
-
-### Semantic << Keyword Performance
-
-**Diagnosis:** Embeddings not capturing semantic meaning.
-
-**Possible causes:**
-1. **Wrong embedding model**
-   - Solution: Verify using correct Titan model
-
-2. **Text truncation**
-   - Check: Are long answers being truncated?
-   - Solution: Ensure full content is embedded
-
----
-
-## Future Enhancements
-
-### Phase 4: LLM as Judge (Optional)
-
-For end-to-end answer quality evaluation:
-
-**Script:** `scripts/eval_llm_judge.py`
-
-```python
-# Sample 100 questions
-# Call full agent API (not just search)
-# Compare agent response with short_answer using LLM judge
-# Score on 1-5 scale
-
-Target: Average score >4.0
+#### Keyword Search Results:
+```json
+{
+    "keyword":
+    {
+        "recall_at_1": 0.125,
+        "recall_at_5": 0.13,
+        "mrr": 0.1275,
+        "precision": 0.1275,
+        "f1_score": 0.12623762376237624
+    }
+}
 ```
 
-### Phase 5: Error Analysis
+#### Notes:
+The values are terrible. This is a textbook IR failure. Keyword search (PostgreSQL tsvector / plainto_tsquery) looks for shared words between the query and the content. Your data has an extreme mismatch:
 
-**Script:** `scripts/analyze_errors.py`
+```json
+Query (question):  "what film has the song dont you forget about me"
+                   After stop-word removal: "film song dont forget"
 
-```python
-# Find all questions where Recall@5 = False
-# Categorize failures:
-#   - Missing chunks (ingestion issue)
-#   - Wrong embeddings (semantic issue)
-#   - Poor query (question ambiguity)
+Content (answer):  "Don't You (Forget About Me) is a 1985 pop song
+                   performed by Scottish rock band Simple Minds.
+                   The song is best known for being played during
+                   the opening and closing credits of The Breakfast Club."
 ```
 
-### Phase 6: A/B Testing
+Keyword search is binary on this dataset: either it finds a strong term match and ranks it first, or it finds nothing useful at all. It's not producing ranked candidates, it's producing near-zero results with rare correct hits.
 
-Test improvements:
-- Different embedding models
-- Different RRF weights
-- Different reranking strategies
+TODO: test with BM25 instead of tsvector.
 
-Compare metrics before/after changes.
-
----
-
-## Maintenance
-
-### Regular Evaluation
-
-Run evaluation:
-- **Weekly** during active development
-- **After** any search-related code changes
-- **Before** production deployments
-
-### Regression Testing
-
-Maintain a **golden dataset** (100-200 questions) for quick smoke tests:
-
-```bash
-python scripts/eval_search.py --sample-size 100 --quick-test
+#### Hybrid Search Results:
+```json
+{
+    "hybrid":
+    {
+        "recall_at_1": 0.87,
+        "recall_at_5": 0.955,
+        "mrr": 0.9108333333333333,
+        "precision": 0.9108333333333333,
+        "f1_score": 0.8899485259709873
+    }
+}
 ```
 
-Target: Should complete in <2 minutes.
+#### Notes:
+Hybrid is marginally worse than pure semantic, not better. This is expected given the keyword results.
+Since keyword search only finds correct answers 13% of the time, the other 87% it's injecting wrong chunks into the RRF pool — pushing some correct semantic results from rank 1 to rank 2. That's where the −0.010 on Recall@1 comes from.
+
+On this dataset, keyword search is net negative for hybrid fusion. The RRF gets more signal from wrong results than right ones.
+
+
+### Step 2:
+  Insert:  10,000 chunks  (add ivfflat, lists=100, probes=1)
+  Queries: 500 questions
+  Goal:    See if metrics degrade → shows real search difficulty with index. 
+
+#### Semantic Search Results:
+
+```json
+{
+    "semantic":
+    {
+        "recall_at_1": 0.18,
+        "recall_at_5": 0.196,
+        "mrr": 0.18706666666666666,
+        "precision": 0.18706666666666666,
+        "f1_score": 0.18346531057028698
+    }
+}
+```
+
+####  Notes:
+With lists=100 and the default probes=1, 99% of your data is never touched. The correct chunk is almost always in a different cluster than the one being probed.
+
+### Step 3:
+  Insert:  10,000 chunks  (add ivfflat, lists=100, probes=10)
+  Queries: 500 questions
+  Goal:    See if metrics degrade → shows real search difficulty with index. 
+
+Updating the index probes:
+`SET ivfflat.probes = 10;`
+
+#### Semantic Search Results:
+```json
+{
+    "semantic":
+    {
+        "recall_at_1": 0.718,
+        "recall_at_5": 0.9,
+        "mrr": 0.797,
+        "precision": 0.797,
+        "f1_score": 0.7554402640264026
+    }
+}
+```
+#### Notes:
+The probes fix was the entire problem. Going from 1% to 10% of the corpus searched recovered almost all the accuracy.
+The drop from 1K → 10K is expected and healthy:
+Recall@1: 0.880 → 0.718 (−16%) — 10x more candidates competing, correct chunk harder to rank #1
+Recall@5: 0.955 → 0.900 (−5.5%) — still meeting the >0.90 target
+MRR: 0.916 → 0.797 — correct answer now lands at rank 1–2 on average instead of almost always rank 1
+
+### Step 4:
+  Insert:  10,000 chunks  (add hnsw, m = 16, ef_construction = 64)
+  Queries: 500 questions
+  Goal:    See if metrics degrade → shows real search difficulty with index.
+
+Setting the index:
+```
+CREATE INDEX idx_chunks_embedding 
+ON document_chunks 
+USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+```
+
+#### Semantic Search Results:
+```json
+{
+    "semantic":
+    {
+        "recall_at_1": 0.718,
+        "recall_at_5": 0.9,
+        "mrr": 0.797,
+        "precision": 0.797,
+        "f1_score": 0.7554402640264026
+    }
+}
+```
+#### Notes:
+The index is no longer the bottleneck. hnsw gives near-sequential-scan accuracy, it matches ivfflat probes=10.
+
+
+### Step 4:
+  Insert:  10,000 chunks, no idex
+  Queries: 500 questions
+  Goal:    See if metrics improve without an index
+
+#### Semantic Search Results:
+```json
+{
+    "semantic":
+    {
+        "recall_at_1": 0.718,
+        "recall_at_5": 0.9,
+        "mrr": 0.797,
+        "precision": 0.797,
+        "f1_score": 0.7554402640264026
+    }
+}
+```
+
+### Notes:
+Removing index didn't help improve the scores. 
+
+### Summary
+Step 1 — 1K corpus, no index (baseline)
+Semantic search performed excellently (Recall@1: 0.88, Recall@5: 0.955, MRR: 0.916), but these numbers are optimistic — with only 1K candidates there's minimal competition. Keyword search completely failed (Recall@1: 0.125) due to vocabulary mismatch between questions and answers, and hybrid was marginally worse than pure semantic because keyword injected wrong chunks into the RRF pool.
+
+Step 2 — 10K corpus, ivfflat probes=1 (misconfigured index)
+Metrics collapsed to Recall@1: 0.18 — a false disaster caused entirely by the default probes=1 setting, which meant only 1% of the corpus (100 vectors out of 10K) was ever searched per query.
+
+Step 3 — 10K corpus, ivfflat probes=10 (fixed index)
+Metrics recovered significantly (Recall@1: 0.718, Recall@5: 0.900, MRR: 0.797). The ~16% drop from the 1K baseline is real and expected — 10x more candidates compete for the top 5 slots. Recall@5 still meets the >0.90 target.
+
+Step 4 — 10K corpus, hnsw / no index
+Both tests produced identical results to Step 3 (0.718/0.900/0.797), confirming that the index type is no longer the bottleneck. These numbers represent the true accuracy ceiling of the current setup. The remaining gap is the Q&A embedding asymmetry: questions and long-answer content live in different regions of Titan's embedding space. Fixing this requires embedding question + answer together as a single content field, or switching to a model with asymmetric search support.
 
 ---
 
