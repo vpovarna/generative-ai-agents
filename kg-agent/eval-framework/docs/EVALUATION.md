@@ -55,9 +55,9 @@ Transform each row into:
 
 ### Test Plan
 ### Step 1 (Evaluation):
-  Insert:  1,000 chunks  (no index)
-  Queries: 200 questions (random sample with seed)
-  Goal:    Establish baseline Recall@1, Recall@5, MRR
+  Insert:  1,000 chunks  (no index)  
+  Queries: 200 questions (random sample with seed)  
+  Goal:    Establish baseline Recall@1, Recall@5, MRR  
 
 #### Semantic Search Results:
 ```json
@@ -139,9 +139,9 @@ On this dataset, keyword search is net negative for hybrid fusion. The RRF gets 
 
 
 ### Step 2:
-  Insert:  10,000 chunks  (add ivfflat, lists=100, probes=1)
-  Queries: 500 questions
-  Goal:    See if metrics degrade → shows real search difficulty with index. 
+  Insert:  10,000 chunks  (add ivfflat, lists=100, probes=1)  
+  Queries: 500 questions  
+  Goal:    See if metrics degrade → shows real search difficulty with index.   
 
 #### Semantic Search Results:
 
@@ -162,9 +162,9 @@ On this dataset, keyword search is net negative for hybrid fusion. The RRF gets 
 With lists=100 and the default probes=1, 99% of your data is never touched. The correct chunk is almost always in a different cluster than the one being probed.
 
 ### Step 3:
-  Insert:  10,000 chunks  (add ivfflat, lists=100, probes=10)
-  Queries: 500 questions
-  Goal:    See if metrics degrade → shows real search difficulty with index. 
+  Insert:  10,000 chunks  (add ivfflat, lists=100, probes=10)  
+  Queries: 500 questions  
+  Goal:    See if metrics degrade → shows real search difficulty with index.   
 
 Updating the index probes:
 `SET ivfflat.probes = 10;`
@@ -190,9 +190,9 @@ Recall@5: 0.955 → 0.900 (−5.5%) — still meeting the >0.90 target
 MRR: 0.916 → 0.797 — correct answer now lands at rank 1–2 on average instead of almost always rank 1
 
 ### Step 4:
-  Insert:  10,000 chunks  (add hnsw, m = 16, ef_construction = 64)
-  Queries: 500 questions
-  Goal:    See if metrics degrade → shows real search difficulty with index.
+  Insert:  10,000 chunks  (add hnsw, m = 16, ef_construction = 64)  
+  Queries: 500 questions  
+  Goal:    See if metrics degrade → shows real search difficulty with index.  
 
 Setting the index:
 ```
@@ -220,9 +220,9 @@ The index is no longer the bottleneck. hnsw gives near-sequential-scan accuracy,
 
 
 ### Step 4:
-  Insert:  10,000 chunks, no idex
-  Queries: 500 questions
-  Goal:    See if metrics improve without an index
+  Insert:  10,000 chunks, no idex  
+  Queries: 500 questions  
+  Goal:    See if metrics improve without an index  
 
 #### Semantic Search Results:
 ```json
