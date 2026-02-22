@@ -17,22 +17,22 @@ func NewStageRunner(checkers []Checker) *StageRunner {
 }
 
 func (r *StageRunner) Run(evaluationContext models.EvaluationContext) []models.StageResult {
-	result := make(chan models.StageResult, len(r.Checkers))
+	results := make(chan models.StageResult, len(r.Checkers))
 	var wg sync.WaitGroup
 
 	for _, checker := range r.Checkers {
 		wg.Add(1)
 		go func(c Checker) {
 			defer wg.Done()
-			result <- c.Check(evaluationContext)
+			results <- c.Check(evaluationContext)
 		}(checker)
 	}
 
 	wg.Wait()
-	close(result)
+	close(results)
 
 	var stageResults []models.StageResult
-	for res := range result {
+	for res := range results {
 		stageResults = append(stageResults, res)
 	}
 
