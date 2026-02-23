@@ -2,6 +2,10 @@
 
 A real-time evaluation service that scores AI agent responses using a two-stage pipeline: fast heuristic checks followed by LLM-as-Judge scoring via AWS Bedrock (Claude).
 
+Supports two modes:
+- **HTTP API** — send evaluation requests directly via REST
+- **Redis Stream Consumer** — consume events from a Redis Stream for async evaluation
+
 ---
 
 ## Purpose
@@ -57,6 +61,7 @@ Weights are configurable at startup.
 - Go 1.21+
 - AWS credentials with Bedrock access
 - Claude model enabled in your AWS region
+- Redis (for stream consumer mode)
 
 ---
 
@@ -68,21 +73,55 @@ Create a `.env` file in `eval-agent/`:
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
-CLAUDE_MODEL_ID=bedrock-model-id
+CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
 EVAL_AGENT_API_PORT=18081
 EARLY_EXIT_THRESHOLD=0.2
+
+# Redis Stream (consumer mode only)
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=
 ```
 
 ---
 
 ## Running
 
+### HTTP API mode
+
+```bash
+cd eval-agent
+go run cmd/api/main.go
+```
+
+Server starts on `http://localhost:18081`.
+
+### Redis Stream consumer mode
+
 ```bash
 cd eval-agent
 go run cmd/main.go
 ```
 
-Server starts on `http://localhost:18081`.
+The consumer connects to Redis, joins the `eval-group` consumer group on the `eval-events` stream, and processes messages as they arrive. Stop with `Ctrl+C` for graceful shutdown.
+
+---
+
+## Sending Messages to the Stream
+
+Use `redis-cli` to publish a test message:
+
+```bash
+redis-cli XADD eval-events '*' payload '{
+  "event_id": "evt-001",
+  "event_type": "agent_response",
+  "agent": {"name": "my-agent", "type": "rag", "version": "1.0.0"},
+  "interaction": {
+    "user_query": "What is the capital of France?",
+    "context": "France is a country in Western Europe. Its capital city is Paris.",
+    "answer": "The capital of France is Paris."
+  }
+}'
+```
 
 ---
 
