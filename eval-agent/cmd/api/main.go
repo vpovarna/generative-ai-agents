@@ -30,7 +30,7 @@ func main() {
 
 	// Load env
 	if err := godotenv.Load(); err != nil {
-		log.Warn().Msg("No .env file found")
+		logger.Warn().Msg("No .env file found")
 	}
 
 	ctx := context.Background()
@@ -40,7 +40,7 @@ func main() {
 	modelID := os.Getenv("CLAUDE_MODEL_ID")
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create Bedrock client")
+		logger.Fatal().Err(err).Msg("Failed to create Bedrock client")
 	}
 
 	// Wire Components
@@ -91,7 +91,7 @@ func main() {
 	}
 
 	addr := fmt.Sprintf(":%s", port)
-	log.Info().Str("address", addr).Msg("Starting Eval Agent API")
+	logger.Info().Str("address", addr).Msg("Starting Eval Agent API")
 
 	server := http.Server{
 		Addr:    addr,
@@ -99,6 +99,6 @@ func main() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatal().Err(err).Msg("Server failed")
+		logger.Fatal().Err(err).Msg("Server failed")
 	}
 }

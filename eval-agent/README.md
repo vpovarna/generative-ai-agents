@@ -108,10 +108,10 @@ The consumer connects to Redis, joins the `eval-group` consumer group on the `ev
 
 ## Sending Messages to the Stream
 
-Use `redis-cli` to publish a test message:
+### CLI Producer (recommended)
 
 ```bash
-redis-cli XADD eval-events '*' payload '{
+go run cmd/producer/main.go -d '{
   "event_id": "evt-001",
   "event_type": "agent_response",
   "agent": {"name": "my-agent", "type": "rag", "version": "1.0.0"},
@@ -121,6 +121,14 @@ redis-cli XADD eval-events '*' payload '{
     "answer": "The capital of France is Paris."
   }
 }'
+```
+
+Flags: `-d` (inline JSON), `--redis-addr`, `--stream` (default: eval-events)
+
+### Alternative: redis-cli
+
+```bash
+redis-cli XADD eval-events '*' payload '{"event_id":"evt-001","event_type":"agent_response","agent":{"name":"my-agent","type":"rag","version":"1.0.0"},"interaction":{"user_query":"What is the capital of France?","context":"France is a country in Western Europe. Its capital city is Paris.","answer":"The capital of France is Paris."}}'
 ```
 
 ---

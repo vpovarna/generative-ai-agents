@@ -1,0 +1,14 @@
+{
+  "event_id": "evt-review-001",
+  "event_type": "agent_response",
+  "agent": {
+    "name": "my-agent",
+    "type": "rag",
+    "version": "1.0.0"
+  },
+  "interaction": {
+    "user_query": "What are the main benefits of exercise?",
+    "context": "Regular exercise improves cardiovascular health, strengthens muscles, and can boost mental well-being. The WHO recommends at least 150 minutes of moderate activity per week.",
+    "answer": "Exercise is good for your heart and muscles. It might also help with mood. Experts say to do about 150 minutes per week."
+  }
+}

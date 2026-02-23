@@ -1,0 +1,14 @@
+{
+  "event_id": "evt-fail-001",
+  "event_type": "agent_response",
+  "agent": {
+    "name": "my-agent",
+    "type": "rag",
+    "version": "1.0.0"
+  },
+  "interaction": {
+    "user_query": "Explain the theory of relativity in detail.",
+    "context": "Einstein developed the theory of relativity in the early 20th century.",
+    "answer": "ok"
+  }
+}

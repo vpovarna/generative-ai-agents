@@ -1,0 +1,14 @@
+{
+  "event_id": "evt-pass-001",
+  "event_type": "agent_response",
+  "agent": {
+    "name": "my-agent",
+    "type": "rag",
+    "version": "1.0.0"
+  },
+  "interaction": {
+    "user_query": "What is the capital of France?",
+    "context": "France is a country in Western Europe. Its capital city is Paris, which is also the largest city in the country and a major global center for culture and commerce.",
+    "answer": "The capital of France is Paris. It is the largest city in France and a major European hub for culture, art, and business."
+  }
+}
