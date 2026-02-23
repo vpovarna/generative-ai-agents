@@ -2,21 +2,22 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 
+	"github.com/emicklei/go-restful/v3"
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/aggregator"
+	"github.com/povarna/generative-ai-with-go/eval-agent/internal/api"
+	"github.com/povarna/generative-ai-with-go/eval-agent/internal/api/middleware"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/redis"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/stream"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -32,8 +33,7 @@ func main() {
 		log.Warn().Msg("No .env file found")
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
+	ctx := context.Background()
 
 	// Initialize Bedrock client for embeddings
 	region := os.Getenv("AWS_REGION")
@@ -41,19 +41,6 @@ func main() {
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create Bedrock client")
-	}
-
-	// Redis client
-	streamCfg := stream.NewStreamConfig(
-		os.Getenv("REDIS_ADDR"), // "localhost:6379"
-		"eval-events",           // stream name
-		"eval-group",            // consumer group
-		os.Getenv("HOSTNAME"),   // unique consumer name
-	)
-
-	redisClient, err := redis.ConnectRedis(ctx, os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), 5)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to Redis")
 	}
 
 	// Wire Components
@@ -83,24 +70,35 @@ func main() {
 	}
 	exec := executor.NewExecutor(stageRunner, judgeRunner, agg, earlyExit, &logger)
 
-	consumer := stream.NewConsumer(redisClient, streamCfg.Stream, streamCfg.Group, streamCfg.ConsumerName, exec, &logger)
+	// API
+	handler := api.NewHandler(exec, &logger)
+	container := restful.NewContainer()
+	container.Filter(middleware.Logger)
+	container.Filter(middleware.RecoverPanic)
+	api.RegisterRoutes(container, handler)
 
-	// Setup consumer
-	err = consumer.Setup(ctx)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to setup consumer")
+	// CORS
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+	})
+
+	// Server
+	port := os.Getenv("EVAL_AGENT_API_PORT")
+	if port == "" {
+		port = "18081"
 	}
 
-	// Start consumer
-	go func() {
-		if err := consumer.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			logger.Error().Err(err).Msg("Consumer stopped with error")
-		}
-	}()
+	addr := fmt.Sprintf(":%s", port)
+	log.Info().Str("address", addr).Msg("Starting Eval Agent API")
 
-	// Wait for context to be done
-	<-ctx.Done()
-	logger.Info().Msg("Shutting down...")
+	server := http.Server{
+		Addr:    addr,
+		Handler: corsHandler.Handler(container),
+	}
 
-	log.Info().Msg("Eval Agent stopped")
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal().Err(err).Msg("Server failed")
+	}
 }
