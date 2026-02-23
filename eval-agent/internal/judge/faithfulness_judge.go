@@ -8,17 +8,20 @@ import (
 
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/rs/zerolog"
 )
 
 // FaithfulnessJudge evaluates whether the answer is grounded in the provided context.
 // It penalizes answers that introduce facts or claims not supported by the context (hallucinations).
 type FaithfulnessJudge struct {
 	llmClient *bedrock.Client
+	logger    *zerolog.Logger
 }
 
-func NewFaithfulnessJudge(client *bedrock.Client) *FaithfulnessJudge {
+func NewFaithfulnessJudge(client *bedrock.Client, logger *zerolog.Logger) *FaithfulnessJudge {
 	return &FaithfulnessJudge{
 		llmClient: client,
+		logger:    logger,
 	}
 }
 
@@ -38,6 +41,8 @@ func (j *FaithfulnessJudge) Evaluate(ctx context.Context, evaluationContext mode
 		Temperature: 0.0, // determinist
 	})
 	if err != nil {
+		j.logger.Error().Err(err).Str("judge", "faithfulness-judge").Msg("LLM call failed")
+
 		result.Reason = "Failed to call LLM"
 		result.Duration = time.Since(now)
 		return result
@@ -54,6 +59,7 @@ func (j *FaithfulnessJudge) Evaluate(ctx context.Context, evaluationContext mode
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
 
+	j.logger.Debug().Str("judge", "faithfulness-judge").Float64("score", result.Score).Msg("judge completed")
 	return result
 
 }
@@ -65,9 +71,6 @@ Penalize if the answer introduces facts not present in the context.
 
 Context: %s
 Answer: %s
-
-Does the answer stay faithful to the context? Score 0.0-1.0.
-Penalize if the answer introduces facts not present in the context.
 
 Respond ONLY in JSON: {"score": <float>, "reason": "<string>"}`, evaluationContext.Context, evaluationContext.Answer)
 }

@@ -5,15 +5,18 @@ import (
 	"sync"
 
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/rs/zerolog"
 )
 
 type JudgeRunner struct {
 	Judges []Judge
+	logger *zerolog.Logger
 }
 
-func NewJudgeRunner(judges []Judge) *JudgeRunner {
+func NewJudgeRunner(judges []Judge, logger *zerolog.Logger) *JudgeRunner {
 	return &JudgeRunner{
 		Judges: judges,
+		logger: logger,
 	}
 }
 
@@ -36,6 +39,7 @@ func (c *JudgeRunner) Run(ctx context.Context, evaluationContext models.Evaluati
 	for result := range results {
 		stageResults = append(stageResults, result)
 	}
+	c.logger.Debug().Int("judgeCount", len(stageResults)).Msg("all judges completed")
 
 	return stageResults
 }

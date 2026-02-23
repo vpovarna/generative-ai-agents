@@ -8,16 +8,19 @@ import (
 
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/rs/zerolog"
 )
 
 // This is a LLM judge which checks if the answer is internally logically consistent — independent of the query or context.
 type CoherenceJudge struct {
 	llmClient *bedrock.Client
+	logger    *zerolog.Logger
 }
 
-func NewCoherenceJudge(client *bedrock.Client) *CoherenceJudge {
+func NewCoherenceJudge(client *bedrock.Client, logger *zerolog.Logger) *CoherenceJudge {
 	return &CoherenceJudge{
 		llmClient: client,
+		logger:    logger,
 	}
 }
 
@@ -37,6 +40,8 @@ func (j *CoherenceJudge) Evaluate(ctx context.Context, evaluationContext models.
 		Temperature: 0.0, // determinist
 	})
 	if err != nil {
+		j.logger.Error().Err(err).Str("judge", "coherence-judge").Msg("LLM call failed")
+
 		result.Reason = "Failed to call LLM"
 		result.Duration = time.Since(now)
 		return result
@@ -53,6 +58,7 @@ func (j *CoherenceJudge) Evaluate(ctx context.Context, evaluationContext models.
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
 
+	j.logger.Debug().Str("judge", "coherence-judge").Float64("score", result.Score).Msg("judge completed")
 	return result
 
 }

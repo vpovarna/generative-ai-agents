@@ -7,6 +7,7 @@ import (
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
+	"github.com/rs/zerolog"
 )
 
 type Executor struct {
@@ -14,6 +15,7 @@ type Executor struct {
 	judgeRunner         *judge.JudgeRunner
 	aggregator          *aggregator.Aggregator
 	earlyExitThreshold  float64
+	logger              *zerolog.Logger
 }
 
 func NewExecutor(
@@ -21,17 +23,21 @@ func NewExecutor(
 	judgeRunner *judge.JudgeRunner,
 	aggregator *aggregator.Aggregator,
 	earlyExitThreshold float64,
+	logger *zerolog.Logger,
 ) *Executor {
 	return &Executor{
 		precheckStageRunner: stageRunner,
 		judgeRunner:         judgeRunner,
 		aggregator:          aggregator,
 		earlyExitThreshold:  earlyExitThreshold,
+		logger:              logger,
 	}
 }
 
 func (e *Executor) Execute(ctx context.Context, evalCtx models.EvaluationContext) models.EvaluationResult {
 	id := evalCtx.RequestID
+	e.logger.Info().Str("requestID", id).Msg("starting evaluation")
+
 	result := models.EvaluationResult{
 		ID:         id,
 		Stages:     []models.StageResult{},
@@ -56,11 +62,18 @@ func (e *Executor) Execute(ctx context.Context, evalCtx models.EvaluationContext
 	if stageEvalAvgScore < e.earlyExitThreshold {
 		result.Stages = append(result.Stages, stageEvalResults...)
 		result.Verdict = models.VerdictFail
+		e.logger.Info().Float64("avgScore", stageEvalAvgScore).Msg("early exit triggered")
 
 		return result
 	}
 
 	judgeEvaResults := e.judgeRunner.Run(ctx, evalCtx)
 
-	return e.aggregator.Aggregate(id, stageEvalResults, judgeEvaResults)
+	finalResult := e.aggregator.Aggregate(id, stageEvalResults, judgeEvaResults)
+	e.logger.
+		Info().
+		Str("verdict", string(finalResult.Verdict)).
+		Float64("confidence", result.Confidence).
+		Msg("evaluation complete")
+	return finalResult
 }

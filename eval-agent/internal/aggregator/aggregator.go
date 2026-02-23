@@ -2,6 +2,7 @@ package aggregator
 
 import (
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/rs/zerolog"
 )
 
 type Weights struct {
@@ -11,11 +12,13 @@ type Weights struct {
 
 type Aggregator struct {
 	Weights Weights
+	logger  *zerolog.Logger
 }
 
-func NewAggregator(weights Weights) *Aggregator {
+func NewAggregator(weights Weights, logger *zerolog.Logger) *Aggregator {
 	return &Aggregator{
 		Weights: weights,
+		logger:  logger,
 	}
 }
 
@@ -47,6 +50,12 @@ func (a *Aggregator) Aggregate(id string, stage1 []models.StageResult, stage2 []
 
 	result.Confidence = confidence
 	result.Verdict = a.calculateVerdict(confidence)
+
+	a.logger.
+		Info().
+		Float64("confidence", confidence).
+		Str("verdict", string(result.Verdict)).
+		Msg("aggregation complete")
 	return result
 }
 

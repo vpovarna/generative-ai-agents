@@ -8,19 +8,21 @@ import (
 
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/rs/zerolog"
 )
 
 // This is an LLM judge who validates if the answer address the query
 type RelevanceJudge struct {
 	llmClient *bedrock.Client
+	logger    *zerolog.Logger
 }
 
-func NewRelevanceJudge(client *bedrock.Client) *RelevanceJudge {
+func NewRelevanceJudge(client *bedrock.Client, logger *zerolog.Logger) *RelevanceJudge {
 	return &RelevanceJudge{
 		llmClient: client,
+		logger:    logger,
 	}
 }
-
 
 func (j *RelevanceJudge) Evaluate(ctx context.Context, evaluationContext models.EvaluationContext) models.StageResult {
 	now := time.Now()
@@ -38,6 +40,8 @@ func (j *RelevanceJudge) Evaluate(ctx context.Context, evaluationContext models.
 	})
 
 	if err != nil {
+		j.logger.Error().Err(err).Str("judge", "relevance-judge").Msg("LLM call failed")
+
 		result.Reason = "Failed to call LLM"
 		result.Duration = time.Since(now)
 		return result
@@ -54,6 +58,7 @@ func (j *RelevanceJudge) Evaluate(ctx context.Context, evaluationContext models.
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
 
+	j.logger.Debug().Str("judge", "relevance-judge").Float64("score", result.Score).Msg("judge completed")
 	return result
 
 }

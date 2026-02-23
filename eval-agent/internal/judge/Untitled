@@ -1,0 +1,1 @@
+	j.logger.Debug().Str("judge", "faithfulness-judge").Float64("score", result.Score).Msg("judge completed")
