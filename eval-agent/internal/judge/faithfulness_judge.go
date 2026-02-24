@@ -36,7 +36,7 @@ func (j *FaithfulnessJudge) Evaluate(ctx context.Context, evaluationContext mode
 	prompt := j.buildPrompt(evaluationContext)
 
 	resp, err := j.llmClient.InvokeModel(ctx, bedrock.ClaudeRequest{
-		Pormpt:      prompt,
+		Prompt:      prompt,
 		MaxTokens:   256,
 		Temperature: 0.0, // determinist
 	})

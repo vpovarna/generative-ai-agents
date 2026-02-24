@@ -10,7 +10,7 @@ import (
 )
 
 type ClaudeRequest struct {
-	Pormpt      string
+	Prompt      string
 	MaxTokens   int
 	Temperature float64
 }
@@ -50,7 +50,7 @@ func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*Claud
 		Messages: []claudeMessage{
 			{
 				Role:    "user",
-				Content: request.Pormpt,
+				Content: request.Prompt,
 			},
 		},
 	}
@@ -68,7 +68,7 @@ func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*Claud
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("Unable to invoke claude mode. Error: %w", err)
+		return nil, fmt.Errorf("Unable to invoke claude model. Error: %w", err)
 	}
 
 	var response claudeMessageResponse

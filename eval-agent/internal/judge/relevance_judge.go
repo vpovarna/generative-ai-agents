@@ -34,7 +34,7 @@ func (j *RelevanceJudge) Evaluate(ctx context.Context, evaluationContext models.
 	prompt := j.buildPrompt(evaluationContext)
 
 	resp, err := j.llmClient.InvokeModel(ctx, bedrock.ClaudeRequest{
-		Pormpt:      prompt,
+		Prompt:      prompt,
 		MaxTokens:   256,
 		Temperature: 0.0, // determinist
 	})
