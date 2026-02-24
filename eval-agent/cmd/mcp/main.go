@@ -2,8 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"io"
 	"os"
+	"os/signal"
 	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -29,7 +34,9 @@ func main() {
 		logger.Warn().Msg("No .env file found")
 	}
 
-	ctx := context.Background()
+	// Graceful shutdown on SIGINT/SIGTERM
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	// Initialize Bedrock client for embeddings
 	region := os.Getenv("AWS_REGION")
@@ -95,6 +102,11 @@ func main() {
 
 	// Run over stdio
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
+		// EOF / "server is closing" is expected when stdin closes (e.g. echo | ./bin/eval-mcp)
+		if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "server is closing") {
+			logger.Debug().Err(err).Msg("MCP server stopped")
+			return
+		}
 		logger.Error().Err(err).Msg("Failed to run mcp server")
 		os.Exit(1)
 	}

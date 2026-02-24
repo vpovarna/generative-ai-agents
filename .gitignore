@@ -38,4 +38,5 @@ kg-agent/eval-framework/scripts/
 
 # Main files
 eval-agent/main
+eval-agent/bin/
 kg-agent/main

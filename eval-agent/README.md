@@ -2,9 +2,10 @@
 
 A real-time evaluation service that scores AI agent responses using a two-stage pipeline: fast heuristic checks followed by LLM-as-Judge scoring via AWS Bedrock (Claude).
 
-Supports two modes:
+Supports three modes:
 - **HTTP API** — send evaluation requests directly via REST
 - **Redis Stream Consumer** — consume events from a Redis Stream for async evaluation
+- **MCP (Model Context Protocol)** — expose evaluation as a tool for Cursor, Claude Desktop, and other MCP clients
 
 ---
 
@@ -105,6 +106,108 @@ go run cmd/main.go
 ```
 
 The consumer connects to Redis, joins the `eval-group` consumer group on the `eval-events` stream, and processes messages as they arrive. Stop with `Ctrl+C` for graceful shutdown.
+
+### MCP mode (stdio)
+
+```bash
+cd eval-agent
+go run cmd/mcp/main.go
+```
+
+The server runs over stdio and exposes the `evaluate_response` tool. Configure it in Cursor (Settings → MCP) or Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "eval-agent": {
+      "command": "go",
+      "args": ["run", "cmd/mcp/main.go"],
+      "cwd": "/path/to/eval-agent"
+    }
+  }
+}
+```
+
+**Tool input** (matches HTTP API field names):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `event_id` | string | yes | Unique event identifier |
+| `user_query` | string | yes | User's original query |
+| `answer` | string | yes | Agent response to evaluate |
+| `context` | string | no | Optional context or retrieved documents |
+
+Stop with `Ctrl+C` for graceful shutdown.
+
+#### Test manually (JSON-RPC)
+
+Build the binary first:
+
+```bash
+cd eval-agent
+go build -o bin/eval-mcp cmd/mcp/main.go
+```
+
+MCP requires an **initialize handshake** before `tools/list` or `tools/call`. Send these messages in order (one JSON-RPC message per line). Use `sleep 2` to keep the pipe open so the server can respond before EOF.
+
+Test `tools/list`:
+
+```bash
+(printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  ; sleep 2) | ./bin/eval-mcp 2>/dev/null
+```
+
+Expected output: JSON with `result.tools` containing `evaluate_response`.
+
+Test `evaluate_response`:
+
+```bash
+(printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"evaluate_response","arguments":{"event_id":"test-1","user_query":"What is AI?","answer":"AI is artificial intelligence","context":""}}}' \
+  ; sleep 5) | ./bin/eval-mcp 2>/dev/null
+```
+
+Expected output: JSON with confidence score, verdict, and all stage results.
+
+#### Add to Claude Code
+
+```bash
+claude mcp add --transport stdio --scope project eval-agent \
+  -- /path/to/eval-agent/bin/eval-mcp
+```
+
+Replace `/path/to/eval-agent` with your actual eval-agent directory.
+
+Verify configuration:
+
+```bash
+claude mcp list
+```
+
+Should show: `eval-agent (stdio) - Ready`
+
+#### Test in Claude Code session
+
+Start a new Claude Code session and ask:
+
+> Use the evaluate_response tool to evaluate this: Query='What is RAG?', Answer='RAG is Retrieval Augmented Generation, a technique that combines information retrieval with text generation.', Context='RAG systems retrieve relevant documents and use them to generate accurate responses.'
+
+Claude will call the tool and return something like: `{"confidence": 0.92, "verdict": "pass", "stages": [...]}`
+
+#### View MCP status
+
+Within a Claude Code session, run:
+
+```
+/mcp
+```
+
+Shows all connected MCP servers and their tools.
 
 ---
 
