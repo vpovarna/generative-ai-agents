@@ -40,11 +40,11 @@ type EvaluationRequest struct {
 
 // Normalized internal object
 type EvaluationContext struct {
-	RequestID string
-	Query     string
-	Context   string
-	Answer    string
-	CreatedAt time.Time
+	RequestID string    `json:"request_id" jsonschema:"required,description=Unique event identifier"`
+	Query     string    `json:"user_query" jsonschema:"required,description=User's original query"`
+	Context   string    `json:"context,omitempty" jsonschema:"description=Optional context or retrieved documents"`
+	Answer    string    `json:"answer" jsonschema:"required,description=Agent response to evaluate"`
+	CreatedAt time.Time `json:"created_at" jsonschema:"description=Time when the evaluation context was created"`
 }
 
 // One evaluator's output
