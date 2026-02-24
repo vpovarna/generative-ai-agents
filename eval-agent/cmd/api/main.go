@@ -38,6 +38,17 @@ func main() {
 	// Initialize Bedrock client for embeddings
 	region := os.Getenv("AWS_REGION")
 	modelID := os.Getenv("CLAUDE_MODEL_ID")
+
+	// Aggregator weights
+	precheckWeight, err := strconv.ParseFloat(os.Getenv("PRECHECK_WEIGHT"), 64)
+	if err != nil {
+		precheckWeight = 0.3
+	}
+	llmJudgeWeight, err := strconv.ParseFloat(os.Getenv("LLM_JUDGE_WEIGHT"), 64)
+	if err != nil {
+		llmJudgeWeight = 0.7
+	}
+
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to create Bedrock client")
@@ -55,12 +66,13 @@ func main() {
 		judge.NewRelevanceJudge(bedrockClient, &logger),
 		judge.NewCoherenceJudge(bedrockClient, &logger),
 		judge.NewFaithfulnessJudge(bedrockClient, &logger),
+		judge.NewCompletenessJudge(bedrockClient, &logger),
 	}, &logger)
 
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
-		PreChecks: 0.3,
-		LLMJudge:  0.7,
+		PreChecks: precheckWeight,
+		LLMJudge:  llmJudgeWeight,
 	}, &logger)
 
 	// Executor

@@ -211,3 +211,21 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 ```
 
 Expected: `"verdict": "fail"` with no LLM judge results (early exit triggered).
+
+### Test Completeness Judge
+```bash
+curl -X POST http://localhost:18081/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-completeness",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "Explain both encryption and decryption, and provide examples of each",
+      "context": "Encryption converts plaintext to ciphertext. Decryption reverses this.",
+      "answer": "Encryption converts plaintext to ciphertext using a key."
+    }
+  }'
+```
+
+Expected: `"verdict": "fail"` Low completeness score (only addressed encryption, missed decryption and examples)

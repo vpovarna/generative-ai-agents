@@ -51,6 +51,16 @@ func main() {
 		os.Getenv("HOSTNAME"),   // unique consumer name
 	)
 
+	// Aggregator weights
+	precheckWeight, err := strconv.ParseFloat(os.Getenv("PRECHECK_WEIGHT"), 64)
+	if err != nil {
+		precheckWeight = 0.3
+	}
+	llmJudgeWeight, err := strconv.ParseFloat(os.Getenv("LLM_JUDGE_WEIGHT"), 64)
+	if err != nil {
+		llmJudgeWeight = 0.7
+	}
+
 	redisClient, err := redis.ConnectRedis(ctx, os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), 5)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to Redis")
@@ -68,12 +78,13 @@ func main() {
 		judge.NewRelevanceJudge(bedrockClient, &logger),
 		judge.NewCoherenceJudge(bedrockClient, &logger),
 		judge.NewFaithfulnessJudge(bedrockClient, &logger),
+		judge.NewCompletenessJudge(bedrockClient, &logger),
 	}, &logger)
 
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
-		PreChecks: 0.3,
-		LLMJudge:  0.7,
+		PreChecks: precheckWeight,
+		LLMJudge:  llmJudgeWeight,
 	}, &logger)
 
 	// Executor
