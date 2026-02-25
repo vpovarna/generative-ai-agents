@@ -13,11 +13,11 @@ import (
 
 // This is a LLM judge which checks if the answer is internally logically consistent — independent of the query or context.
 type CoherenceJudge struct {
-	llmClient *bedrock.Client
+	llmClient LLMClient
 	logger    *zerolog.Logger
 }
 
-func NewCoherenceJudge(client *bedrock.Client, logger *zerolog.Logger) *CoherenceJudge {
+func NewCoherenceJudge(client LLMClient, logger *zerolog.Logger) *CoherenceJudge {
 	return &CoherenceJudge{
 		llmClient: client,
 		logger:    logger,

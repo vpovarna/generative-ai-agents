@@ -13,11 +13,11 @@ import (
 
 // This is an LLM judge who validates if the answer address the query
 type RelevanceJudge struct {
-	llmClient *bedrock.Client
+	llmClient LLMClient
 	logger    *zerolog.Logger
 }
 
-func NewRelevanceJudge(client *bedrock.Client, logger *zerolog.Logger) *RelevanceJudge {
+func NewRelevanceJudge(client LLMClient, logger *zerolog.Logger) *RelevanceJudge {
 	return &RelevanceJudge{
 		llmClient: client,
 		logger:    logger,

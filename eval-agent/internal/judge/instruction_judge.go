@@ -14,11 +14,11 @@ import (
 // InstructionJudge evaluates whether the answer follows explicit instructions in the query.
 // It checks for format requirements, count specifications, style constraints, and other directives.
 type InstructionJudge struct {
-	llmClient *bedrock.Client
+	llmClient LLMClient
 	logger    *zerolog.Logger
 }
 
-func NewInstructionJudge(client *bedrock.Client, logger *zerolog.Logger) *InstructionJudge {
+func NewInstructionJudge(client LLMClient, logger *zerolog.Logger) *InstructionJudge {
 	return &InstructionJudge{
 		llmClient: client,
 		logger:    logger,

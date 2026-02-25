@@ -15,11 +15,11 @@ import (
 // questions or sub-requests in the user query. It scores 1.0 if every part is covered,
 // 0.5 if some are missing or incomplete, and 0.0 if major parts are ignored.
 type CompletenessJudge struct {
-	llmClient *bedrock.Client
+	llmClient LLMClient
 	logger    *zerolog.Logger
 }
 
-func NewCompletenessJudge(client *bedrock.Client, logger *zerolog.Logger) *CompletenessJudge {
+func NewCompletenessJudge(client LLMClient, logger *zerolog.Logger) *CompletenessJudge {
 	return &CompletenessJudge{
 		llmClient: client,
 		logger:    logger,

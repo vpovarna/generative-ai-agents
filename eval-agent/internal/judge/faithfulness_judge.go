@@ -14,11 +14,11 @@ import (
 // FaithfulnessJudge evaluates whether the answer is grounded in the provided context.
 // It penalizes answers that introduce facts or claims not supported by the context (hallucinations).
 type FaithfulnessJudge struct {
-	llmClient *bedrock.Client
+	llmClient LLMClient
 	logger    *zerolog.Logger
 }
 
-func NewFaithfulnessJudge(client *bedrock.Client, logger *zerolog.Logger) *FaithfulnessJudge {
+func NewFaithfulnessJudge(client LLMClient, logger *zerolog.Logger) *FaithfulnessJudge {
 	return &FaithfulnessJudge{
 		llmClient: client,
 		logger:    logger,
