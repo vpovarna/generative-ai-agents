@@ -352,4 +352,146 @@ Expected: `"verdict": "fail"` Low completeness score (only addressed encryption,
     }' | jq '.stages[] | select(.name=="instruction-judge")'
 ```
 
-Expected: `"verdict": "pass". asked for 3, gave 4 - minor overshoot
+Expected: `"verdict": "pass"`. asked for 3, gave 4 - minor overshoot
+
+---
+
+## Single Judge Evaluation
+
+Evaluate using only one specific judge, bypassing the full pipeline. Useful for targeted testing or when you only need one quality dimension.
+
+**POST** `/api/v1/evaluate/judge/{judge_name}?threshold=0.7`
+
+**Available judges:** `relevance`, `faithfulness`, `coherence`, `completeness`, `instruction`
+
+**Query parameters:**
+- `threshold` (optional): Pass/fail threshold (0.0-1.0, default: 0.7)
+
+### Test Relevance Judge (default threshold)
+
+```bash
+curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-relevance",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is the capital of France?",
+      "context": "France is a country in Western Europe. Paris is its capital.",
+      "answer": "The capital of France is Paris."
+    }
+  }'
+```
+
+**Expected response:**
+```json
+{
+  "id": "test-relevance",
+  "stages": [
+    {
+      "name": "relevance-judge",
+      "score": 0.95,
+      "reason": "The answer directly addresses the query about France's capital.",
+      "duration_ns": 850000000
+    }
+  ],
+  "confidence": 0.95,
+  "verdict": "pass"
+}
+```
+
+### Test Faithfulness Judge (custom threshold)
+
+```bash
+curl -X POST "http://localhost:18081/api/v1/evaluate/judge/faithfulness?threshold=0.9" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-faithfulness",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "What encryption does the product support?",
+      "context": "Our product supports AES-256 encryption for data at rest.",
+      "answer": "The product supports AES-256 encryption and also offers quantum-resistant algorithms."
+    }
+  }'
+```
+
+**Expected:** Low score (hallucination detected - quantum-resistant not in context), `"verdict": "fail"` with threshold 0.9
+
+### Test Coherence Judge
+
+```bash
+curl -X POST http://localhost:18081/api/v1/evaluate/judge/coherence \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-coherence",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "How does encryption work?",
+      "context": "Encryption uses mathematical algorithms to scramble data.",
+      "answer": "Encryption scrambles data. But also, pizza is delicious. The algorithm ensures security."
+    }
+  }'
+```
+
+**Expected:** Low score (incoherent - random pizza statement), `"verdict": "fail"`
+
+### Test Completeness Judge
+
+```bash
+curl -X POST http://localhost:18081/api/v1/evaluate/judge/completeness \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-completeness",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "Explain both encryption and decryption, and provide examples",
+      "context": "Encryption converts plaintext to ciphertext. Decryption reverses this. Example: AES-256.",
+      "answer": "Encryption converts plaintext to ciphertext using algorithms like AES-256."
+    }
+  }'
+```
+
+**Expected:** Low score (incomplete - missed decryption and full examples), `"verdict": "fail"`
+
+### Test Instruction Judge
+
+```bash
+curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-instruction",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "List exactly 3 encryption algorithms",
+      "context": "Common algorithms: AES, RSA, ChaCha20, Blowfish, Twofish",
+      "answer": "1. AES\n2. RSA"
+    }
+  }'
+```
+
+**Expected:** Low score (instruction violation - asked for 3, provided only 2), `"verdict": "fail"`
+
+### Test with Strict Threshold
+
+```bash
+curl -X POST "http://localhost:18081/api/v1/evaluate/judge/relevance?threshold=0.95" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-strict",
+    "event_type": "agent_response",
+    "agent": {"name": "test", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is AI?",
+      "context": "AI stands for Artificial Intelligence.",
+      "answer": "AI refers to artificial intelligence, which is technology that mimics human cognition."
+    }
+  }'
+```
+
+**Expected:** High relevance score (~0.9-0.95), verdict depends on whether score exceeds 0.95 threshold

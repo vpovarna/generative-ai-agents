@@ -70,6 +70,8 @@ func main() {
 		judge.NewInstructionJudge(bedrockClient, &logger),
 	}, &logger)
 
+	judges := judge.NewJudgeFactory(bedrockClient, &logger)
+
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
 		PreChecks: precheckWeight,
@@ -81,10 +83,11 @@ func main() {
 	if earlyExit == 0 {
 		earlyExit = 0.2
 	}
-	exec := executor.NewExecutor(stageRunner, judgeRunner, agg, earlyExit, &logger)
+	agentExecutor := executor.NewExecutor(stageRunner, judgeRunner, agg, earlyExit, &logger)
+	judgeExecutor := executor.NewJudgeExecutor(judges, &logger)
 
 	// API
-	handler := api.NewHandler(exec, &logger)
+	handler := api.NewHandler(agentExecutor, judgeExecutor, &logger)
 	container := restful.NewContainer()
 	container.Filter(middleware.Logger)
 	container.Filter(middleware.RecoverPanic)
