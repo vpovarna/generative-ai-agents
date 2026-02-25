@@ -56,6 +56,13 @@ func (j *InstructionJudge) Evaluate(ctx context.Context, evaluationContext model
 		return result
 	}
 
+	if llmResponse.Score == 0.0 && llmResponse.Reason == "" {
+		j.logger.Error().Msg("LLM returned empty score and reason")
+		result.Reason = "Invalid LLM response: missing score and reason"
+		result.Duration = time.Since(now)
+		return result
+	}
+
 	result.Score = llmResponse.Score
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
