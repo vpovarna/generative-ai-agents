@@ -103,6 +103,10 @@ func TestRelevanceJudge_Evaluate_LlmApiError(t *testing.T) {
 		t.Errorf("Expected name='relevance-judge', got '%s'", result.Name)
 	}
 
+	if result.Score != 0.0 {
+		t.Errorf("Expected score=0.0 on error, got %f", result.Score)
+	}
+
 	if result.Reason != "Failed to call LLM" {
 		t.Errorf("Invalid reason message, got :%s", result.Reason)
 	}
