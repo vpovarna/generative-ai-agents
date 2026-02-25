@@ -190,11 +190,38 @@ cd eval-agent
 go build -o bin/eval-mcp cmd/mcp/main.go
 ```
 
-### Add to Claude Code
+### Add to Claude Code (binary)
 
 ```bash
 claude mcp add --transport stdio --scope project eval-agent \
   -- /path/to/eval-agent/bin/eval-mcp
+```
+
+### Add to Claude Code (Docker)
+
+Claude Code has no `--transport docker`; use `--transport stdio` with `docker run` as the command:
+
+```bash
+# Build the image first
+cd eval-agent
+docker build -t eval-agent-mcp .
+
+# Add MCP using Docker (pass env vars to the container)
+claude mcp add --transport stdio --scope project eval-agent \
+  --env AWS_REGION=us-east-1 \
+  --env AWS_ACCESS_KEY_ID=your-key \
+  --env AWS_SECRET_ACCESS_KEY=your-secret \
+  --env CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0 \
+  -- docker run -i --rm \
+    -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e CLAUDE_MODEL_ID \
+    eval-agent-mcp:latest
+```
+
+Or with an env file (use an absolute path):
+
+```bash
+claude mcp add --transport stdio --scope project eval-agent \
+  -- docker run -i --rm --env-file /path/to/eval-agent/.env eval-agent-mcp:latest
 ```
 
 Verify:
@@ -228,6 +255,62 @@ Edit `claude_desktop_config.json` or Cursor MCP settings:
   "mcpServers": {
     "eval-agent": {
       "command": "/path/to/eval-agent/bin/eval-mcp"
+    }
+  }
+}
+```
+
+### Run MCP via Docker
+
+Build and run the eval-agent MCP in a container:
+
+```bash
+cd eval-agent
+docker build -t eval-agent-mcp .
+```
+
+**Cursor MCP config** – use Docker as the command and pass env vars:
+
+```json
+{
+  "mcpServers": {
+    "eval-agent": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "AWS_REGION",
+        "-e", "AWS_ACCESS_KEY_ID",
+        "-e", "AWS_SECRET_ACCESS_KEY",
+        "-e", "CLAUDE_MODEL_ID",
+        "eval-agent-mcp:latest"
+      ],
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "your-key",
+        "AWS_SECRET_ACCESS_KEY": "your-secret",
+        "CLAUDE_MODEL_ID": "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+      }
+    }
+  }
+}
+```
+
+Or use an env file (ensure `.env` is not committed):
+
+```json
+{
+  "mcpServers": {
+    "eval-agent": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--env-file", "/path/to/eval-agent/.env",
+        "eval-agent-mcp:latest"
+      ]
     }
   }
 }

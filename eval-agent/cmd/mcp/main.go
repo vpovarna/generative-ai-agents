@@ -25,9 +25,7 @@ func main() {
 	logger := log.Logger
 
 	// Load env
-	if err := godotenv.Load(); err != nil {
-		logger.Error().Err(err).Msg("No .env file found")
-	}
+	_ = godotenv.Load()
 
 	// Graceful shutdown on SIGINT/SIGTERM
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

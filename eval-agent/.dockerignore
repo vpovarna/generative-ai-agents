@@ -1,0 +1,17 @@
+# Exclude env and secrets
+.env
+.env.*
+
+# Git and IDE
+.git
+.gitignore
+.idea
+.vscode
+
+# Build artifacts
+bin/
+*.test
+
+# Docs and misc
+*.md
+docs/
