@@ -38,6 +38,16 @@ func (h *Handler) Evaluate(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// EvaluationRequest validation
+	validateEvaluationRequest(evalRequest)
+	if err := validateEvaluationRequest(evalRequest); err != nil {
+		h.logger.Warn().Err(err).Msg("Request validation failed")
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	h.logger.Info().
 		Str("event_id", evalRequest.EventID).
 		Str("event_type", string(evalRequest.EventType)).
@@ -81,6 +91,16 @@ func (h *Handler) EvaluateSingleJudge(req *restful.Request, resp *restful.Respon
 		return
 	}
 
+	// EvaluationRequest validation
+	validateEvaluationRequest(evalRequest)
+	if err := validateEvaluationRequest(evalRequest); err != nil {
+		h.logger.Warn().Err(err).Msg("Request validation failed")
+		resp.WriteHeaderAndEntity(http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	h.logger.Info().
 		Str("event_id", evalRequest.EventID).
 		Str("judge_name", judgeName).
@@ -102,7 +122,7 @@ func (h *Handler) EvaluateSingleJudge(req *restful.Request, resp *restful.Respon
 			})
 			return
 		}
-		
+
 		h.logger.Error().Err(err).Msg("Evaluation failed")
 		resp.WriteHeaderAndEntity(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error",
@@ -140,4 +160,17 @@ func normalize(req models.EvaluationRequest) models.EvaluationContext {
 		Answer:    req.Interaction.Answer,
 		CreatedAt: time.Now(),
 	}
+}
+
+func validateEvaluationRequest(evalRequest models.EvaluationRequest) error {
+	if evalRequest.EventID == "" {
+		return errors.New("event_id is required")
+	}
+	if evalRequest.Interaction.UserQuery == "" {
+		return errors.New("user_query is required")
+	}
+	if evalRequest.Interaction.Answer == "" {
+		return errors.New("answer is required")
+	}
+	return nil
 }

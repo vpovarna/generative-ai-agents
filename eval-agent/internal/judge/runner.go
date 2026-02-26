@@ -3,6 +3,7 @@ package judge
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
 	"github.com/rs/zerolog"
@@ -24,11 +25,37 @@ func (c *JudgeRunner) Run(ctx context.Context, evaluationContext models.Evaluati
 	results := make(chan models.StageResult, len(c.Judges))
 	var wg sync.WaitGroup
 
+	judgeTimeout := 15 * time.Second
+
 	for _, judge := range c.Judges {
 		wg.Add(1)
 		go func(j Judge) {
 			defer wg.Done()
-			results <- j.Evaluate(ctx, evaluationContext)
+
+			// Create a context with timeout to block the queue
+			judgeCtx, cancel := context.WithTimeout(ctx, judgeTimeout)
+			defer cancel()
+
+			// run the judge with timeout
+			evalResult := j.Evaluate(judgeCtx, evaluationContext)
+
+			// Check if timeout occurred
+			if judgeCtx.Err() == context.DeadlineExceeded {
+				c.logger.Warn().
+					Str("judge_name", evalResult.Name).
+					Dur("timeout", judgeTimeout).
+					Msg("Judge evaluation timed out")
+
+				// Return a failed result instead of blocking
+				evalResult = models.StageResult{
+					Name:     evalResult.Name,
+					Score:    0.0,
+					Reason:   "evaluation timed out after " + judgeTimeout.String(),
+					Duration: judgeTimeout,
+				}
+			}
+
+			results <- evalResult
 		}(judge)
 	}
 
