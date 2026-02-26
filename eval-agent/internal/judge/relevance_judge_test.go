@@ -29,6 +29,12 @@ func (m *MockLLMClient) InvokeModel(ctx context.Context, request bedrock.ClaudeR
 	return m.ResponseToReturn, m.ErrorToReturn
 }
 
+func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error) {
+	m.WasCalled = true
+	m.LastRequest = &request
+	return m.ResponseToReturn, m.ErrorToReturn
+}
+
 func TestRelevanceJudge_Evaluate_HappyPath(t *testing.T) {
 	logger := zerolog.New(os.Stdout).Level(zerolog.Disabled)
 

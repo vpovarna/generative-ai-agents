@@ -35,7 +35,7 @@ func (j *InstructionJudge) Evaluate(ctx context.Context, evaluationContext model
 
 	prompt := j.buildPrompt(evaluationContext)
 
-	resp, err := j.llmClient.InvokeModel(ctx, bedrock.ClaudeRequest{
+	resp, err := j.llmClient.InvokeModelWithRetry(ctx, bedrock.ClaudeRequest{
 		Prompt:      prompt,
 		MaxTokens:   300,
 		Temperature: 0.0,

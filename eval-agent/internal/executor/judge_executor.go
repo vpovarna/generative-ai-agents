@@ -9,12 +9,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type JudgeFactory interface {
+	Get(judgeName string) (judge.Judge, error)
+}
+
 type JudgeExecutor struct {
-	judges *judge.JudgeFactory
+	judges JudgeFactory
 	logger *zerolog.Logger
 }
 
-func NewJudgeExecutor(judges *judge.JudgeFactory, logger *zerolog.Logger) *JudgeExecutor {
+func NewJudgeExecutor(judges JudgeFactory, logger *zerolog.Logger) *JudgeExecutor {
 	return &JudgeExecutor{
 		judges: judges,
 		logger: logger,

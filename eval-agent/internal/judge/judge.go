@@ -15,4 +15,5 @@ type Judge interface {
 // This allows mocking in tests without making real API calls
 type LLMClient interface {
 	InvokeModel(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error)
+	InvokeModelWithRetry(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error)
 }
