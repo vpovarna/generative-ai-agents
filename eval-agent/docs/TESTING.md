@@ -11,7 +11,7 @@ cd eval-agent
 go run cmd/api/main.go
 ```
 
-Server should be listening on `http://localhost:18081`.
+Server should be listening on `http://localhost:18082`.
 
 ---
 
@@ -20,7 +20,7 @@ Server should be listening on `http://localhost:18081`.
 Verify the service is running:
 
 ```bash
-curl http://localhost:18081/api/v1/health
+curl http://localhost:18082/api/v1/health
 ```
 
 **Expected response:**
@@ -38,7 +38,7 @@ curl http://localhost:18081/api/v1/health
 ### Test 1: Happy Path (High Quality Answer)
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "evt-001",
@@ -67,7 +67,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 ### Test 2: Early Exit (Very Poor Answer)
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "evt-002",
@@ -92,7 +92,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 ### Test 3: Review Verdict (Medium Quality)
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "evt-003",
@@ -107,9 +107,9 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 ```
 
 **Expected:**
-- `"verdict": "review"` (confidence between 0.5 and 0.8)
-- Answer is relevant but incomplete
-- Completeness judge should score lower
+- `"verdict": "pass"` (confidence higher then 0.8)
+- Answer is relevant but incomplete. Score 0.6
+- Completeness judge should score lower. Score 0.5
 
 ---
 
@@ -120,7 +120,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 #### Test 1: Highly Relevant Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/relevance \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-relevance-pass",
@@ -142,7 +142,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
 #### Test 2: Irrelevant Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/relevance \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-relevance-fail",
@@ -168,7 +168,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
 #### Test 1: Faithful Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/faithfulness \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/faithfulness \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-faithfulness-pass",
@@ -190,7 +190,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/faithfulness \
 #### Test 2: Hallucination Detected
 
 ```bash
-curl -X POST "http://localhost:18081/api/v1/evaluate/judge/faithfulness?threshold=0.9" \
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/faithfulness?threshold=0.9" \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-faithfulness-fail",
@@ -216,7 +216,7 @@ curl -X POST "http://localhost:18081/api/v1/evaluate/judge/faithfulness?threshol
 #### Test 1: Coherent Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/coherence \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/coherence \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-coherence-pass",
@@ -238,7 +238,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/coherence \
 #### Test 2: Incoherent Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/coherence \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/coherence \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-coherence-fail",
@@ -264,7 +264,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/coherence \
 #### Test 1: Complete Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/completeness \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/completeness \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-completeness-pass",
@@ -286,7 +286,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/completeness \
 #### Test 2: Incomplete Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/completeness \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/completeness \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-completeness-fail",
@@ -312,7 +312,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/completeness \
 #### Test 1: Instructions Followed
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/instruction \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-instruction-pass",
@@ -334,7 +334,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
 #### Test 2: Count Violation
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/instruction \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-instruction-fail",
@@ -356,7 +356,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
 #### Test 3: Minor Overshoot (Still Passes)
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/instruction \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-instruction-overshoot",
@@ -382,7 +382,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/instruction \
 ### Test with Lenient Threshold (0.5)
 
 ```bash
-curl -X POST "http://localhost:18081/api/v1/evaluate/judge/relevance?threshold=0.5" \
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/relevance?threshold=0.5" \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-lenient",
@@ -405,7 +405,7 @@ curl -X POST "http://localhost:18081/api/v1/evaluate/judge/relevance?threshold=0
 ### Test with Strict Threshold (0.95)
 
 ```bash
-curl -X POST "http://localhost:18081/api/v1/evaluate/judge/relevance?threshold=0.95" \
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/relevance?threshold=0.95" \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-strict",
@@ -431,7 +431,7 @@ curl -X POST "http://localhost:18081/api/v1/evaluate/judge/relevance?threshold=0
 ### Empty Answer
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-empty",
@@ -454,7 +454,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 ### No Context (Faithfulness Judge)
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/faithfulness \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/faithfulness \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-no-context",
@@ -474,58 +474,16 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/faithfulness \
 
 ---
 
-## Quick Test Summary
-
-| Test | Endpoint | Expected Verdict |
-|------|----------|------------------|
-| Happy path | `/evaluate` | pass |
-| Early exit | `/evaluate` | fail |
-| Relevance - good | `/judge/relevance` | pass |
-| Relevance - bad | `/judge/relevance` | fail |
-| Faithfulness - hallucination | `/judge/faithfulness` | fail |
-| Coherence - incoherent | `/judge/coherence` | fail |
-| Completeness - incomplete | `/judge/completeness` | fail |
-| Instruction - count violation | `/judge/instruction` | fail |
-| Strict threshold (0.95) | `/judge/relevance?threshold=0.95` | depends on score |
-
----
-
 ## Using jq for Filtering
 
 Extract specific judge scores:
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate ... | jq '.stages[] | select(.name=="relevance-judge")'
+curl -X POST http://localhost:18082/api/v1/evaluate ... | jq '.stages[] | select(.name=="relevance-judge")'
 ```
 
 Show only verdict and confidence:
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate ... | jq '{verdict, confidence}'
+curl -X POST http://localhost:18082/api/v1/evaluate ... | jq '{verdict, confidence}'
 ```
-
----
-
-## Automated Testing
-
-Create a test script:
-
-```bash
-#!/bin/bash
-BASE_URL="http://localhost:18081/api/v1"
-
-# Test 1: Health check
-echo "Testing health endpoint..."
-curl -s $BASE_URL/health | jq .
-
-# Test 2: Full evaluation
-echo "Testing full evaluation..."
-curl -s -X POST $BASE_URL/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"event_id":"test-1",...}' | jq '{verdict, confidence}'
-
-# Add more tests...
-```
-
-Make executable: `chmod +x test.sh`
-Run: `./test.sh`

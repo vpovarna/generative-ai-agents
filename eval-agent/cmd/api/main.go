@@ -55,7 +55,7 @@ func main() {
 	// Server
 	port := os.Getenv("EVAL_AGENT_API_PORT")
 	if port == "" {
-		port = "18081"
+		port = "18082"
 	}
 
 	addr := fmt.Sprintf(":%s", port)

@@ -61,7 +61,7 @@ go run cmd/agent/main.go
 ```bash
 cd eval-agent
 
-# Run HTTP API mode (port 18081)
+# Run HTTP API mode (port 18082)
 go run cmd/api/main.go
 
 # Run Redis Stream consumer mode
@@ -182,7 +182,7 @@ Each service requires a `.env` file in its directory.
 
 **Eval Agent**:
 - `AWS_REGION`, `CLAUDE_MODEL_ID`
-- `EVAL_AGENT_API_PORT` (18081)
+- `EVAL_AGENT_API_PORT` (18082)
 - `EARLY_EXIT_THRESHOLD` (0.2)
 - `REDIS_ADDR`, `REDIS_PASSWORD` (for stream mode)
 
@@ -207,7 +207,7 @@ curl -X POST http://localhost:8081/api/v1/admin/cache/clear
 **Eval Agent**:
 ```bash
 # Evaluate an agent response
-curl -X POST http://localhost:18081/api/v1/evaluate \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{"event_id":"evt-001","interaction":{"user_query":"...","context":"...","answer":"..."}}'
 ```
@@ -312,7 +312,7 @@ Both services use AWS Bedrock for Claude access:
 **Check service health**:
 ```bash
 curl http://localhost:8081/api/v1/health  # kg-agent
-curl http://localhost:18081/api/v1/health # eval-agent
+curl http://localhost:18082/api/v1/health # eval-agent
 ```
 
 **Check Docker services**:

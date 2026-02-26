@@ -88,7 +88,7 @@ AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
-EVAL_AGENT_API_PORT=18081
+EVAL_AGENT_API_PORT=18082
 EARLY_EXIT_THRESHOLD=0.2
 ```
 
@@ -99,11 +99,11 @@ cd eval-agent
 go run cmd/api/main.go
 ```
 
-Server starts on `http://localhost:18081`.
+Server starts on `http://localhost:18082`.
 
 **Health Check:**
 ```bash
-curl http://localhost:18081/api/v1/health
+curl http://localhost:18082/api/v1/health
 # Returns: {"status":"ok","version":"1.0.0"}
 ```
 
@@ -118,7 +118,7 @@ curl http://localhost:18081/api/v1/health
 Runs both stages (prechecks + all 5 LLM judges) and aggregates results.
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "evt-001",
@@ -157,7 +157,7 @@ Evaluate with only one judge (bypasses full pipeline).
 - `threshold` (optional): Pass/fail threshold (0.0-1.0, default: 0.7)
 
 ```bash
-curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
+curl -X POST http://localhost:18082/api/v1/evaluate/judge/relevance \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-001",
@@ -185,7 +185,7 @@ curl -X POST http://localhost:18081/api/v1/evaluate/judge/relevance \
 
 **Custom threshold:**
 ```bash
-curl -X POST "http://localhost:18081/api/v1/evaluate/judge/faithfulness?threshold=0.9" ...
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/faithfulness?threshold=0.9" ...
 ```
 
 ---
