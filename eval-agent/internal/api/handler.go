@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -91,7 +92,23 @@ func (h *Handler) EvaluateSingleJudge(req *restful.Request, resp *restful.Respon
 	ctx := req.Request.Context()
 	evalContext := normalize(evalRequest)
 
-	evalResult := h.judgeExecutor.Execute(ctx, judgeName, threshold, evalContext)
+	evalResult, err := h.judgeExecutor.Execute(ctx, judgeName, threshold, evalContext)
+
+	if err != nil {
+		if errors.Is(err, executor.ErrJudgeNotFound) {
+			h.logger.Warn().Str("judge_name", judgeName).Msg("Judge not found")
+			resp.WriteHeaderAndEntity(http.StatusNotFound, map[string]string{
+				"error": "judge not found: " + judgeName,
+			})
+			return
+		}
+		
+		h.logger.Error().Err(err).Msg("Evaluation failed")
+		resp.WriteHeaderAndEntity(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+		return
+	}
 
 	h.logger.Info().
 		Str("judge_name", judgeName).

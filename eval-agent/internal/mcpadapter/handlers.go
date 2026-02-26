@@ -83,6 +83,7 @@ func EvaluateSingleJudge(
 		threshold = 0.7
 	}
 
-	result := judgeExec.Execute(ctx, input.JudgeName, threshold, evalCtx)
-	return nil, result, nil
+	result, err := judgeExec.Execute(ctx, input.JudgeName, threshold, evalCtx)
+
+	return nil, result, err
 }
