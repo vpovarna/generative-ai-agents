@@ -61,6 +61,13 @@ func (j *CoherenceJudge) Evaluate(ctx context.Context, evaluationContext models.
 		return result
 	}
 
+	if llmResponse.Score < 0.0 || llmResponse.Score > 1.0 {
+		j.logger.Error().Msg("LLM returned invalid score")
+		result.Reason = "Invalid LLM response: missing score and reason"
+		result.Duration = time.Since(now)
+		return result
+	}
+
 	result.Score = llmResponse.Score
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
