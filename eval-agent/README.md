@@ -43,15 +43,20 @@ User Query + Context + Answer
 
 ### Stage 2: LLM Judges (Parallel, AWS Bedrock Claude)
 
-| Judge | Evaluates |
-|-------|-----------|
-| **RelevanceJudge** | Does answer address the query? |
-| **FaithfulnessJudge** | Grounded in context? (no hallucinations) |
-| **CoherenceJudge** | Internally consistent logic? |
-| **CompletenessJudge** | Fully addresses all parts of query? |
-| **InstructionJudge** | Follows explicit instructions? (format, count, style) |
+| Judge | Evaluates | Scoring Rubric |
+|-------|-----------|----------------|
+| **RelevanceJudge** | Does answer address the query? | 1.0 (highly relevant) → 0.0 (unrelated) |
+| **FaithfulnessJudge** | Grounded in context? (no hallucinations) | 1.0 (all grounded) → 0.0 (mostly hallucinated) |
+| **CoherenceJudge** | Internally consistent logic? | 1.0 (fully coherent) → 0.0 (contradictory) |
+| **CompletenessJudge** | Fully addresses all parts of query? | 1.0 (all addressed), 0.5 (some missing), 0.0 (major parts ignored) |
+| **InstructionJudge** | Follows explicit instructions? (format, count, style) | 1.0 (all followed), 0.7-0.9 (most), 0.4-0.6 (some), 0.0-0.3 (mostly ignored) |
 
 Each judge returns `score` (0.0–1.0) + `reason` string.
+
+**Performance:**
+- Judges run in **parallel** for speed
+- 15-second timeout per judge
+- Automatic retry with exponential backoff (all judges except RelevanceJudge)
 
 ### Aggregation
 
@@ -95,6 +100,12 @@ go run cmd/api/main.go
 ```
 
 Server starts on `http://localhost:18081`.
+
+**Health Check:**
+```bash
+curl http://localhost:18081/api/v1/health
+# Returns: {"status":"ok","version":"1.0.0"}
+```
 
 ---
 
