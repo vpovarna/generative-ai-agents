@@ -63,19 +63,30 @@ func LoadJudgesConfig() (*JudgesConfig, error) {
 }
 
 func applyDefaults(cfg *JudgesConfig) {
-	// For each judge, merge with default model config
+	if cfg.Judges.DefaultModel.MaxTokens == 0 {
+		cfg.Judges.DefaultModel.MaxTokens = 256
+	}
+	if cfg.Judges.DefaultModel.Temperature == 0.0 {
+		cfg.Judges.DefaultModel.Temperature = 0.0
+	}
+
+	// For each judge, apply defaults
 	for i := range cfg.Judges.Evaluators {
 		judge := &cfg.Judges.Evaluators[i]
-		if judge.Model == nil {
-			continue
-		}
 
-		// Merge: if judge.Model field is zero value, use default
-		if judge.Model.MaxTokens == 0 {
-			judge.Model.MaxTokens = cfg.Judges.DefaultModel.MaxTokens
-		}
-		if judge.Model.Temperature == 0.0 {
-			judge.Model.Temperature = cfg.Judges.DefaultModel.Temperature
+		if judge.Model == nil {
+			judge.Model = &ModelConfig{
+				MaxTokens:   cfg.Judges.DefaultModel.MaxTokens,
+				Temperature: cfg.Judges.DefaultModel.Temperature,
+				Retry:       cfg.Judges.DefaultModel.Retry,
+			}
+		} else {
+			if judge.Model.MaxTokens == 0 {
+				judge.Model.MaxTokens = cfg.Judges.DefaultModel.MaxTokens
+			}
+			if judge.Model.Temperature == 0.0 {
+				judge.Model.Temperature = cfg.Judges.DefaultModel.Temperature
+			}
 		}
 	}
 }
@@ -85,18 +96,41 @@ func (cfg *JudgesConfig) Validate() error {
 		return fmt.Errorf("no judges configured in evaluators list")
 	}
 
+	seen := make(map[string]bool)
+
 	for i, judge := range cfg.Judges.Evaluators {
 		if judge.Name == "" {
 			return fmt.Errorf("judge at index %d is missing name", i)
 		}
+
+		if seen[judge.Name] {
+			return fmt.Errorf("duplicate judge name: %s", judge.Name)
+		}
+		seen[judge.Name] = true
+
 		if judge.Prompt == "" {
 			return fmt.Errorf("judge %s is missing prompt", judge.Name)
 		}
 
-		// Validate that prompt can be parsed as a template
 		if _, err := template.New(judge.Name).Parse(judge.Prompt); err != nil {
 			return fmt.Errorf("judge %s has invalid prompt template: %w", judge.Name, err)
 		}
+
+		if judge.Model != nil {
+			if judge.Model.MaxTokens < 0 {
+				return fmt.Errorf("judge %s has negative max_tokens: %d", judge.Name, judge.Model.MaxTokens)
+			}
+			if judge.Model.Temperature < 0.0 || judge.Model.Temperature > 1.0 {
+				return fmt.Errorf("judge %s has invalid temperature: %f (must be 0.0-1.0)", judge.Name, judge.Model.Temperature)
+			}
+		}
+	}
+
+	if cfg.Judges.DefaultModel.MaxTokens < 0 {
+		return fmt.Errorf("default model has negative max_tokens: %d", cfg.Judges.DefaultModel.MaxTokens)
+	}
+	if cfg.Judges.DefaultModel.Temperature < 0.0 || cfg.Judges.DefaultModel.Temperature > 1.0 {
+		return fmt.Errorf("default model has invalid temperature: %f (must be 0.0-1.0)", cfg.Judges.DefaultModel.Temperature)
 	}
 
 	return nil

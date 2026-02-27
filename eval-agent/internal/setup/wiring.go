@@ -8,6 +8,7 @@ import (
 
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/aggregator"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/eval-agent/internal/config"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
@@ -52,15 +53,23 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 		&prechecks.FormatChecker{},
 	})
 
-	// Judges
-	judgeRunner := judge.NewJudgeRunner([]judge.Judge{
-		judge.NewRelevanceJudge(bedrockClient, logger),
-		judge.NewCoherenceJudge(bedrockClient, logger),
-		judge.NewFaithfulnessJudge(bedrockClient, logger),
-		judge.NewCompletenessJudge(bedrockClient, logger),
-		judge.NewInstructionJudge(bedrockClient, logger),
-	}, logger)
+	// Load judges configuration from YAML
+	judgesConfig, err := config.LoadJudgesConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load judges config: %w", err)
+	}
 
+	// Create judge pool and build judges from config
+	judgePool := judge.NewJudgePool(bedrockClient, logger)
+	judges, err := judgePool.BuildFromConfig(judgesConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build judges from config: %w", err)
+	}
+
+	// Create judge runner with config-driven judges
+	judgeRunner := judge.NewJudgeRunner(judges, logger)
+
+	// Judge factory for single judge execution (used by JudgeExecutor)
 	judgeFactory := judge.NewJudgeFactory(bedrockClient, logger)
 
 	// Aggregator

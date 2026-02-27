@@ -21,22 +21,6 @@ type AnnotationLabel struct {
 	Description string `yaml:"description"`
 }
 
-// JudgeConfig contains per-judge configuration
-type JudgeConfig struct {
-	Enabled        bool              `yaml:"enabled"`
-	Weight         float64           `yaml:"weight"`
-	PromptOverride string            `yaml:"prompt_override"`
-	RequireContext bool              `yaml:"require_context"`
-	ModelParams    ModelParamsConfig `yaml:"model_params"`
-}
-
-// ModelParamsConfig contains Bedrock model parameters for judge calls
-type ModelParamsConfig struct {
-	MaxTokens   int     `yaml:"max_tokens"`
-	Temperature float64 `yaml:"temperature"`
-	UseRetry    bool    `yaml:"use_retry"`
-}
-
 // AggregationConfig contains weights for aggregating precheck and judge scores
 type AggregationConfig struct {
 	PrecheckWeight float64 `yaml:"precheck_weight"`

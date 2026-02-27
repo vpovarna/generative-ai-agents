@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/aggregator"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/eval-agent/internal/config"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
@@ -73,14 +74,20 @@ func main() {
 		&prechecks.OverlapChecker{MinOverlapThreshold: 0.3},
 		&prechecks.FormatChecker{},
 	})
-	// Stage 2 — LLM Judges
-	judgeRunner := judge.NewJudgeRunner([]judge.Judge{
-		judge.NewRelevanceJudge(bedrockClient, &logger),
-		judge.NewCoherenceJudge(bedrockClient, &logger),
-		judge.NewFaithfulnessJudge(bedrockClient, &logger),
-		judge.NewCompletenessJudge(bedrockClient, &logger),
-		judge.NewInstructionJudge(bedrockClient, &logger),
-	}, &logger)
+
+	// Stage 2 — LLM Judges (from YAML config)
+	judgesConfig, err := config.LoadJudgesConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load judges config")
+	}
+
+	judgePool := judge.NewJudgePool(bedrockClient, &logger)
+	judges, err := judgePool.BuildFromConfig(judgesConfig)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to build judges from config")
+	}
+
+	judgeRunner := judge.NewJudgeRunner(judges, &logger)
 
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
