@@ -2,10 +2,10 @@ package config
 
 // Config represents the complete evaluation configuration
 type Config struct {
-	LLMJudge       LLMJudgeConfig         `yaml:"llm_judge"`
-	EvaluationType string                 `yaml:"evaluation_type"` // "reference" or "no_reference"
-	Judges         map[string]JudgeConfig `yaml:"judges"`
-	Aggregation    AggregationConfig      `yaml:"aggregation"`
+	LLMJudge       LLMJudgeConfig                `yaml:"llm_judge"`
+	EvaluationType string                        `yaml:"evaluation_type"`
+	Judges         map[string]JudgeConfiguration `yaml:"judges"`
+	Aggregation    AggregationConfig             `yaml:"aggregation"`
 }
 
 // LLMJudgeConfig contains the global evaluation prompt and annotation labels
