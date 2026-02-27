@@ -43,13 +43,15 @@ User Query + Context + Answer
 
 ### Stage 2: LLM Judges (Parallel, AWS Bedrock Claude)
 
+**⚙️ Configurable via YAML** - All judges are loaded from `configs/judges.yaml` allowing prompt customization without code changes.
+
 | Judge | Evaluates | Scoring Rubric |
 |-------|-----------|----------------|
-| **RelevanceJudge** | Does answer address the query? | 1.0 (highly relevant) → 0.0 (unrelated) |
-| **FaithfulnessJudge** | Grounded in context? (no hallucinations) | 1.0 (all grounded) → 0.0 (mostly hallucinated) |
-| **CoherenceJudge** | Internally consistent logic? | 1.0 (fully coherent) → 0.0 (contradictory) |
-| **CompletenessJudge** | Fully addresses all parts of query? | 1.0 (all addressed), 0.5 (some missing), 0.0 (major parts ignored) |
-| **InstructionJudge** | Follows explicit instructions? (format, count, style) | 1.0 (all followed), 0.7-0.9 (most), 0.4-0.6 (some), 0.0-0.3 (mostly ignored) |
+| **relevance** | Does answer address the query? | 1.0 (highly relevant) → 0.0 (unrelated) |
+| **faithfulness** | Grounded in context? (no hallucinations) | 1.0 (all grounded) → 0.0 (mostly hallucinated) |
+| **coherence** | Internally consistent logic? | 1.0 (fully coherent) → 0.0 (contradictory) |
+| **completeness** | Fully addresses all parts of query? | 1.0 (all addressed), 0.5 (some missing), 0.0 (major parts ignored) |
+| **instruction** | Follows explicit instructions? (format, count, style) | 1.0 (all followed), 0.7-0.9 (most), 0.4-0.6 (some), 0.0-0.3 (mostly ignored) |
 
 Each judge returns `score` (0.0–1.0) + `reason` string.
 
@@ -81,6 +83,8 @@ confidence = (avg_stage1 × 0.3) + (avg_stage2 × 0.7)
 
 ### Configuration
 
+#### Environment Variables
+
 Create `.env` in `eval-agent/`:
 
 ```env
@@ -90,7 +94,40 @@ AWS_SECRET_ACCESS_KEY=your_secret
 CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
 EVAL_AGENT_API_PORT=18082
 EARLY_EXIT_THRESHOLD=0.2
+
+# Optional: Override default judges config path
+# JUDGES_CONFIG_PATH=configs/judges.yaml
 ```
+
+#### Judge Configuration
+
+Judges are defined in `configs/judges.yaml` with customizable prompts and model parameters:
+
+```yaml
+judges:
+  default_model:
+    max_tokens: 256
+    temperature: 0.0
+    retry: true
+
+  evaluators:
+    - name: relevance
+      enabled: true
+      prompt: |
+        You are an evaluation judge.
+        Score how relevant the answer is to the query...
+
+        Query: {{.Query}}
+        Answer: {{.Answer}}
+
+        {"score": <float>, "reason": "<string>"}
+```
+
+**Benefits:**
+- ✅ Edit prompts without code changes
+- ✅ Enable/disable judges per deployment
+- ✅ Override model settings per judge (max_tokens, temperature, retry)
+- ✅ A/B test different judge configurations
 
 ### Run HTTP API
 
@@ -151,7 +188,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 Evaluate with only one judge (bypasses full pipeline).
 
-**Available judges:** `relevance`, `faithfulness`, `coherence`, `completeness`, `instruction`
+**Available judges:** Dynamically loaded from `configs/judges.yaml` (default: `relevance`, `faithfulness`, `coherence`, `completeness`, `instruction`)
 
 **Query params:**
 - `threshold` (optional): Pass/fail threshold (0.0-1.0, default: 0.7)

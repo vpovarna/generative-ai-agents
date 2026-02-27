@@ -56,6 +56,20 @@ func (mr *MockJudgeMockRecorder) Evaluate(ctx, evaluationContext any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evaluate", reflect.TypeOf((*MockJudge)(nil).Evaluate), ctx, evaluationContext)
 }
 
+// Name mocks base method.
+func (m *MockJudge) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockJudgeMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockJudge)(nil).Name))
+}
+
 // MockLLMClient is a mock of LLMClient interface.
 type MockLLMClient struct {
 	ctrl     *gomock.Controller
@@ -93,4 +107,19 @@ func (m *MockLLMClient) InvokeModel(ctx context.Context, request bedrock.ClaudeR
 func (mr *MockLLMClientMockRecorder) InvokeModel(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeModel", reflect.TypeOf((*MockLLMClient)(nil).InvokeModel), ctx, request)
+}
+
+// InvokeModelWithRetry mocks base method.
+func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InvokeModelWithRetry", ctx, request)
+	ret0, _ := ret[0].(*bedrock.ClaudeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InvokeModelWithRetry indicates an expected call of InvokeModelWithRetry.
+func (mr *MockLLMClientMockRecorder) InvokeModelWithRetry(ctx, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeModelWithRetry", reflect.TypeOf((*MockLLMClient)(nil).InvokeModelWithRetry), ctx, request)
 }
