@@ -40,4 +40,7 @@ kg-agent/eval-framework/scripts/
 eval-agent/main
 eval-agent/bin/
 kg-agent/main
+
+# Claude 
 .mcp.json
+.claude
