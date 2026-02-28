@@ -59,6 +59,7 @@ func TestReader_ContextCancellation(t *testing.T) {
 	file := strings.NewReader(strings.Join(lines, "\n"))
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	reader := NewReader(file, newTestLogger())
 
 	ch := reader.ReadAll(ctx)
