@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/rewrite"
 )
 
 func main() {

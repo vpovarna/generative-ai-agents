@@ -3,7 +3,7 @@ package judge
 import (
 	"testing"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
 	"github.com/rs/zerolog"
 )
 

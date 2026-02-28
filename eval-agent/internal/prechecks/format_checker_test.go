@@ -3,7 +3,7 @@ package prechecks
 import (
 	"testing"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 )
 
 func TestFormatChecker(t *testing.T) {

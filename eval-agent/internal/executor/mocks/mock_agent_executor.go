@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	models "github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	models "github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
 

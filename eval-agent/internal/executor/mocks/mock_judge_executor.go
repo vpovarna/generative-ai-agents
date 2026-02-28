@@ -12,7 +12,7 @@ package mocks
 import (
 	reflect "reflect"
 
-	judge "github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
+	judge "github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
 	gomock "go.uber.org/mock/gomock"
 )
 

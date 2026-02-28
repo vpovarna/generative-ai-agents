@@ -3,7 +3,7 @@ package guardrails
 import (
 	"context"
 
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/bedrock"
 	"github.com/rs/zerolog/log"
 )
 

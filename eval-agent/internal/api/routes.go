@@ -3,8 +3,8 @@ package api
 import (
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/api/middleware"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/api/middleware"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 )
 
 func RegisterRoutes(container *restful.Container, handler *Handler) {

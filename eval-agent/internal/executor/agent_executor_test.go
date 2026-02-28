@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor/mocks"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor/mocks"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/rs/zerolog"
 	"go.uber.org/mock/gomock"
 )

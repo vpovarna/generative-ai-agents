@@ -3,8 +3,8 @@ package judge
 import (
 	"context"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 )
 
 type Judge interface {

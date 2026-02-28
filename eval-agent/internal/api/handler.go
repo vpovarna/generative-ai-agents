@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/emicklei/go-restful/v3"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/api/middleware"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/api/middleware"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/rs/zerolog"
 )
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/embedding"
 	"github.com/rs/zerolog/log"
 )
 

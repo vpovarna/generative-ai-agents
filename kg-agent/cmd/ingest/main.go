@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/database"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/ingestion"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/database"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/embedding"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/ingestion"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

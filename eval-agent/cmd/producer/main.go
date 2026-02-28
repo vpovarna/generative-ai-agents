@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
-	red "github.com/povarna/generative-ai-with-go/eval-agent/internal/redis"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
+	red "github.com/povarna/generative-ai-agents/eval-agent/internal/redis"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

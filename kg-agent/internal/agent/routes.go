@@ -3,7 +3,7 @@ package agent
 import (
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/middleware"
 )
 
 func RegisterRoutes(container *restful.Container, handler *Handler) {

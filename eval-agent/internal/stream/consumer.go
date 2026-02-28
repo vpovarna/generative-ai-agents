@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 )

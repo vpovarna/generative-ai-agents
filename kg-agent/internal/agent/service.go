@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/cache"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/strategy"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/cache"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/conversation"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/rewrite"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/strategy"
 	"github.com/rs/zerolog/log"
 )
 

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 )
 
 // EvaluateInput is the MCP tool input schema for full pipeline evaluation.

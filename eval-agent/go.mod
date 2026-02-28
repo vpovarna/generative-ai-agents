@@ -1,4 +1,4 @@
-module github.com/povarna/generative-ai-with-go/eval-agent
+module github.com/povarna/generative-ai-agents/eval-agent
 
 go 1.25.6
 

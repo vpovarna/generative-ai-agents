@@ -6,12 +6,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/aggregator"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/config"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/executor"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/aggregator"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
 	"github.com/rs/zerolog"
 )
 

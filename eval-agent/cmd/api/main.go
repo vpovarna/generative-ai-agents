@@ -9,9 +9,9 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/api"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/api/middleware"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/setup"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/api"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/api/middleware"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/setup"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

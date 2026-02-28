@@ -12,8 +12,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/mcpadapter"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/setup"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/mcpadapter"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/setup"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

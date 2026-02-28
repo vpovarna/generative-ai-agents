@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "Generative AI with Go - Learning Path"
+	@echo "Generative AI Agents - Production-Ready AI Agents"
 	@echo ""
 	@echo "Available commands:"
 	@echo "  make setup         - Initial setup of all directories"
@@ -57,7 +57,7 @@ week1:
 	fi
 	@cd 01-go-fundamentals && \
 	if [ ! -f "go.mod" ]; then \
-		go mod init github.com/povarna/generative-ai-with-go/fundamentals; \
+		go mod init github.com/povarna/generative-ai-agents/fundamentals; \
 	fi
 	@echo "✓ Week 1 ready!"
 	@echo ""
@@ -74,7 +74,7 @@ week2:
 	fi
 	@cd 02-concurrency && \
 	if [ ! -f "go.mod" ]; then \
-		go mod init github.com/povarna/generative-ai-with-go/concurrency; \
+		go mod init github.com/povarna/generative-ai-agents/concurrency; \
 	fi
 	@echo "✓ Week 2 ready!"
 	@echo ""
@@ -108,7 +108,7 @@ week5:
 	fi
 	@cd 04-ai-agents && \
 	if [ ! -f "go.mod" ]; then \
-		go mod init github.com/povarna/generative-ai-with-go/ai-agents; \
+		go mod init github.com/povarna/generative-ai-agents/ai-agents; \
 	fi
 	@echo "Checking AWS configuration..."
 	@aws sts get-caller-identity >/dev/null 2>&1 && \

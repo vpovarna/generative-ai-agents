@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/middleware"
 )
 
 type QueryRequest struct {

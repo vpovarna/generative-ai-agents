@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/emicklei/go-restful/v3"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/guardrails"
-	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/guardrails"
+	"github.com/povarna/generative-ai-agents/kg-agent/internal/middleware"
 	"github.com/rs/zerolog/log"
 )
 

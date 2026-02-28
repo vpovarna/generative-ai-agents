@@ -1,7 +1,7 @@
 package aggregator
 
 import (
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/rs/zerolog"
 )
 

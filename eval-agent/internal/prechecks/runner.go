@@ -3,7 +3,7 @@ package prechecks
 import (
 	"sync"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 )
 
 type StageRunner struct {
