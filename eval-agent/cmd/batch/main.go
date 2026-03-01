@@ -13,6 +13,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/batch"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/setup"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -121,8 +122,11 @@ func main() {
 	// Write results
 	successCount := 0
 	errorCount := 0
+	var allResults []models.EvaluationResult
 
 	for result := range results {
+		allResults = append(allResults, result)
+
 		if err := writer.Write(result); err != nil {
 			log.Error().Err(err).Str("id", result.ID).Msg("Failed to write result")
 			errorCount++
@@ -142,7 +146,7 @@ func main() {
 		Msg("Processing complete")
 
 	if *summary != "" {
-		writeSummary(summary)
+		writeSummary(summary, allResults)
 	}
 
 	log.Info().Msg("Batch processing complete")
@@ -172,14 +176,26 @@ func formatValidator(format *string) {
 	}
 }
 
-func writeSummary(summary *string) {
+func writeSummary(summary *string, results []models.EvaluationResult) {
 	summaryFile, err := os.Create(*summary)
 	if err != nil {
 		log.Fatal().Err(err).Str("file", *summary).Msg("Failed to create summary file")
 	}
 	defer summaryFile.Close()
 
-	// TODO: Write summary stats (can reuse summary writer logic)
+	// Create a summary writer and populate it
+	summaryWriter := batch.NewSummaryWriter(summaryFile, &log.Logger)
+	for _, result := range results {
+		if err := summaryWriter.Write(result); err != nil {
+			log.Error().Err(err).Str("id", result.ID).Msg("Failed to add result to summary")
+		}
+	}
+
+	// Close writes the computed stats to the file
+	if err := summaryWriter.Close(); err != nil {
+		log.Fatal().Err(err).Str("file", *summary).Msg("Failed to write summary file")
+	}
+
 	log.Info().Str("file", *summary).Msg("Summary written")
 }
 

@@ -392,3 +392,106 @@ func containsHelper(s, substr string) bool {
 	}
 	return false
 }
+
+func TestStripMarkdownCodeBlock(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "plain JSON without markdown",
+			input:    `{"score": 0.85, "reason": "Good answer"}`,
+			expected: `{"score": 0.85, "reason": "Good answer"}`,
+		},
+		{
+			name:     "JSON wrapped in markdown code block with json tag",
+			input:    "```json\n{\"score\": 0.85, \"reason\": \"Good answer\"}\n```",
+			expected: `{"score": 0.85, "reason": "Good answer"}`,
+		},
+		{
+			name:     "JSON wrapped in markdown code block without language tag",
+			input:    "```\n{\"score\": 0.85, \"reason\": \"Good answer\"}\n```",
+			expected: `{"score": 0.85, "reason": "Good answer"}`,
+		},
+		{
+			name:     "JSON with extra whitespace in markdown block",
+			input:    "```json\n  {\"score\": 0.85, \"reason\": \"Good answer\"}  \n```",
+			expected: `{"score": 0.85, "reason": "Good answer"}`,
+		},
+		{
+			name:     "multiline JSON in markdown block",
+			input:    "```json\n{\n  \"score\": 0.85,\n  \"reason\": \"Good answer\"\n}\n```",
+			expected: "{\n  \"score\": 0.85,\n  \"reason\": \"Good answer\"\n}",
+		},
+		{
+			name:     "JSON with leading/trailing whitespace",
+			input:    "  \n{\"score\": 0.85, \"reason\": \"Good answer\"}\n  ",
+			expected: `{"score": 0.85, "reason": "Good answer"}`,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "only markdown markers",
+			input:    "```\n```",
+			expected: "",
+		},
+		{
+			name:     "incomplete markdown block (only opening)",
+			input:    "```json\n{\"score\": 0.85}",
+			expected: "```json\n{\"score\": 0.85}",
+		},
+		{
+			name:     "JSON with backticks in the content",
+			input:    "```json\n{\"score\": 0.85, \"reason\": \"Use ` for code\"}\n```",
+			expected: "{\"score\": 0.85, \"reason\": \"Use ` for code\"}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := stripMarkdownCodeBlock(tt.input)
+			if result != tt.expected {
+				t.Errorf("stripMarkdownCodeBlock() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestLLMJudge_Evaluate_MarkdownWrappedJSON(t *testing.T) {
+	logger := zerolog.Nop()
+
+	cfg := config.JudgeConfiguration{
+		Name:   "test",
+		Prompt: "Score: {{.Answer}}",
+		Model: &config.ModelConfig{
+			MaxTokens: 256,
+		},
+	}
+
+	// Simulate LLM returning markdown-wrapped JSON (common behavior)
+	mockClient := &MockLLMClient{
+		ResponseToReturn: &llm.LLMResponse{
+			Content: "```json\n{\"score\": 0.85, \"reason\": \"Good answer\"}\n```",
+		},
+	}
+
+	judge, _ := NewLLMJudge(cfg, mockClient, &logger)
+
+	evalCtx := models.EvaluationContext{
+		Answer: "test",
+	}
+
+	result := judge.Evaluate(context.Background(), evalCtx)
+
+	// Should successfully parse despite markdown wrapping
+	if result.Score != 0.85 {
+		t.Errorf("Expected score=0.85, got %f", result.Score)
+	}
+	if result.Reason != "Good answer" {
+		t.Errorf("Expected reason='Good answer', got '%s'", result.Reason)
+	}
+}

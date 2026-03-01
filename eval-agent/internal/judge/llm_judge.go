@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"text/template"
 	"time"
 
@@ -105,9 +106,10 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 		return result
 	}
 
-	// Parse LLM response
+	// Parse LLM response (strip markdown code blocks if present)
+	content := stripMarkdownCodeBlock(resp.Content)
 	var llmResponse judgeResponse
-	if err := json.Unmarshal([]byte(resp.Content), &llmResponse); err != nil {
+	if err := json.Unmarshal([]byte(content), &llmResponse); err != nil {
 		j.logger.Error().
 			Err(err).
 			Str("judge", j.name).
@@ -164,4 +166,30 @@ func (j *LLMJudge) buildPrompt(evalCtx models.EvaluationContext) (string, error)
 		return "", fmt.Errorf("template execution failed: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// stripMarkdownCodeBlock removes markdown code block formatting if present
+func stripMarkdownCodeBlock(content string) string {
+	content = strings.TrimSpace(content)
+
+	// Check for markdown code blocks (```json ... ``` or ``` ... ```)
+	if strings.HasPrefix(content, "```") {
+		// Find the first newline (after the opening ```)
+		firstNewline := strings.Index(content, "\n")
+		if firstNewline == -1 {
+			return content
+		}
+
+		// Find the closing ```
+		closingBackticks := strings.LastIndex(content, "```")
+		if closingBackticks == -1 || closingBackticks <= firstNewline {
+			return content
+		}
+
+		// Extract the content between the code blocks
+		content = content[firstNewline+1 : closingBackticks]
+		content = strings.TrimSpace(content)
+	}
+
+	return content
 }
