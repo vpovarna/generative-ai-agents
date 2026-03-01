@@ -10,7 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
-	red "github.com/povarna/generative-ai-agents/eval-agent/internal/redis"
+	red "github.com/povarna/generative-ai-agents/eval-agent/internal/stream/redis"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

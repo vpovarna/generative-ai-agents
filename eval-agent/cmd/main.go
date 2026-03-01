@@ -11,13 +11,13 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/aggregator"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/redis"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/stream"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/stream/redis"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -45,12 +45,16 @@ func main() {
 	}
 
 	// Redis client
-	streamCfg := stream.NewStreamConfig(
-		os.Getenv("REDIS_ADDR"), // "localhost:6379"
-		"eval-events",           // stream name
-		"eval-group",            // consumer group
-		os.Getenv("HOSTNAME"),   // unique consumer name
-	)
+	streamCfg := &stream.StreamConfig{
+		Provider: os.Getenv("STREAM_PROVIDER"),
+		RedisConfig: redis.NewRedisStreamConfig(
+			os.Getenv("REDIS_ADDR"),
+			os.Getenv("REDIS_PASSWORD"),
+			"eval-events",
+			"eval-group",
+			os.Getenv("HOSTNAME"),
+		),
+	}
 
 	// Aggregator weights
 	precheckWeight, err := strconv.ParseFloat(os.Getenv("PRECHECK_WEIGHT"), 64)
@@ -60,11 +64,6 @@ func main() {
 	llmJudgeWeight, err := strconv.ParseFloat(os.Getenv("LLM_JUDGE_WEIGHT"), 64)
 	if err != nil {
 		llmJudgeWeight = 0.7
-	}
-
-	redisClient, err := redis.ConnectRedis(ctx, os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), 5)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to Redis")
 	}
 
 	// Wire Components
@@ -102,7 +101,10 @@ func main() {
 	}
 	exec := executor.NewExecutor(stageRunner, judgeRunner, agg, earlyExit, &logger)
 
-	consumer := stream.NewConsumer(redisClient, streamCfg.Stream, streamCfg.Group, streamCfg.ConsumerName, exec, &logger)
+	consumer, err := stream.NewStreamConsumer(ctx, streamCfg, exec, &logger)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create stream consumer")
+	}
 
 	// Setup consumer
 	err = consumer.Setup(ctx)
