@@ -143,7 +143,7 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
 
-	j.logger.Debug().
+	j.logger.Info().
 		Str("judge", j.name).
 		Float64("score", result.Score).
 		Dur("duration", result.Duration).

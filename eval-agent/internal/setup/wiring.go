@@ -76,8 +76,8 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 	// Create judge runner with config-driven judges
 	judgeRunner := judge.NewJudgeRunner(judges, logger)
 
-	// Judge factory for single judge execution (used by JudgeExecutor)
-	judgeFactory := judge.NewJudgeFactory(llmClient, logger)
+	// Judge factory for single judge execution (reuses same judges)
+	judgeFactory := judge.NewJudgeFactory(judges, logger)
 
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
@@ -86,11 +86,11 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 	}, logger)
 
 	// Executors
-	exec := executor.NewExecutor(stageRunner, judgeRunner, agg, cfg.EarlyExitThreshold, logger)
+	agentExec := executor.NewExecutor(stageRunner, judgeRunner, agg, cfg.EarlyExitThreshold, logger)
 	judgeExec := executor.NewJudgeExecutor(judgeFactory, logger)
 
 	return &Dependencies{
-		Executor:      exec,
+		Executor:      agentExec,
 		JudgeExecutor: judgeExec,
 		Logger:        logger,
 	}, nil

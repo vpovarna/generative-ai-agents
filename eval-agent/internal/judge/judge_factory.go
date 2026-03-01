@@ -14,8 +14,24 @@ type JudgeFactory struct {
 	judges map[string]Judge
 }
 
-// NewJudgeFactory creates a factory with judges loaded from configuration.
-func NewJudgeFactory(llmClient llm.LLMClient, logger *zerolog.Logger) *JudgeFactory {
+// NewJudgeFactory creates a factory from existing judges.
+func NewJudgeFactory(judges []Judge, logger *zerolog.Logger) *JudgeFactory {
+	// Create map by judge name for quick lookup
+	judgesMap := make(map[string]Judge)
+	for _, j := range judges {
+		judgesMap[j.Name()] = j
+	}
+
+	logger.Info().Int("judge_count", len(judgesMap)).Msg("Judge factory initialized")
+
+	return &JudgeFactory{
+		judges: judgesMap,
+	}
+}
+
+// NewJudgeFactoryFromConfig creates a factory with judges loaded from configuration.
+// Deprecated: Use NewJudgeFactory with pre-built judges to avoid duplicate initialization.
+func NewJudgeFactoryFromConfig(llmClient llm.LLMClient, logger *zerolog.Logger) *JudgeFactory {
 	// Load judges config
 	judgesConfig, err := config.LoadJudgesConfig()
 	if err != nil {
@@ -35,17 +51,7 @@ func NewJudgeFactory(llmClient llm.LLMClient, logger *zerolog.Logger) *JudgeFact
 		}
 	}
 
-	// Create map by judge name for quick lookup
-	judgesMap := make(map[string]Judge)
-	for _, j := range judgesList {
-		judgesMap[j.Name()] = j
-	}
-
-	logger.Info().Int("judge_count", len(judgesMap)).Msg("Judge factory initialized from config")
-
-	return &JudgeFactory{
-		judges: judgesMap,
-	}
+	return NewJudgeFactory(judgesList, logger)
 }
 
 func (f *JudgeFactory) Get(judgeName string) (Judge, error) {
