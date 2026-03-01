@@ -44,5 +44,3 @@ kg-agent/main
 # Claude 
 .mcp.json
 .claude
-
-llm_as_judge.md
