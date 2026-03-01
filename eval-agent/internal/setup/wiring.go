@@ -7,10 +7,12 @@ import (
 	"strconv"
 
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/aggregator"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/gpt"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
 	"github.com/rs/zerolog"
 )
@@ -18,6 +20,9 @@ import (
 type Config struct {
 	AWSRegion          string
 	ClaudeModelID      string
+	OpenAIKey          string
+	OpenAIModelID      string
+	DefaultProvider    string
 	PrecheckWeight     float64
 	LLMJudgeWeight     float64
 	EarlyExitThreshold float64
@@ -33,6 +38,9 @@ func LoadConfig() *Config {
 	return &Config{
 		AWSRegion:          getEnv("AWS_REGION", "us-east-1"),
 		ClaudeModelID:      getEnv("CLAUDE_MODEL_ID", ""),
+		OpenAIKey:          getEnv("OPEN_AI_KEY", ""),
+		OpenAIModelID:      getEnv("OPEN_AI_MODEL_ID", ""),
+		DefaultProvider:    getEnv("DEFAULT_LLM_PROVIDER", "bedrock"),
 		PrecheckWeight:     getEnvFloat("PRECHECK_WEIGHT", 0.3),
 		LLMJudgeWeight:     getEnvFloat("LLM_JUDGE_WEIGHT", 0.7),
 		EarlyExitThreshold: getEnvFloat("EARLY_EXIT_THRESHOLD", 0.2),
@@ -40,8 +48,7 @@ func LoadConfig() *Config {
 }
 
 func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependencies, error) {
-	// Bedrock client
-	bedrockClient, err := bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
+	llmClient, err := createLLMClient(ctx, cfg.DefaultProvider, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Bedrock client: %w", err)
 	}
@@ -60,7 +67,7 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 	}
 
 	// Create judge pool and build judges from config
-	judgePool := judge.NewJudgePool(bedrockClient, logger)
+	judgePool := judge.NewJudgePool(llmClient, logger)
 	judges, err := judgePool.BuildFromConfig(judgesConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build judges from config: %w", err)
@@ -70,7 +77,7 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 	judgeRunner := judge.NewJudgeRunner(judges, logger)
 
 	// Judge factory for single judge execution (used by JudgeExecutor)
-	judgeFactory := judge.NewJudgeFactory(bedrockClient, logger)
+	judgeFactory := judge.NewJudgeFactory(llmClient, logger)
 
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
@@ -107,4 +114,15 @@ func getEnvFloat(key string, defaultValue float64) float64 {
 	}
 
 	return value
+}
+
+func createLLMClient(ctx context.Context, provider string, cfg *Config) (llm.LLMClient, error) {
+	switch provider {
+	case "bedrock":
+		return bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
+	case "openai":
+		return gpt.NewClient(cfg.OpenAIKey, cfg.OpenAIModelID)
+	default:
+		return bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
+	}
 }

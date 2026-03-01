@@ -10,6 +10,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0
 	github.com/joho/godotenv v1.5.1
 	github.com/modelcontextprotocol/go-sdk v1.3.1
+	github.com/openai/openai-go v1.12.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.34.0
@@ -49,6 +50,10 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.3 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
