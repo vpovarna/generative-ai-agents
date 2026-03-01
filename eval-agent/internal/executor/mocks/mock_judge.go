@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	bedrock "github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	models "github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -95,10 +95,10 @@ func (m *MockLLMClient) EXPECT() *MockLLMClientMockRecorder {
 }
 
 // InvokeModel mocks base method.
-func (m *MockLLMClient) InvokeModel(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error) {
+func (m *MockLLMClient) InvokeModel(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeModel", ctx, request)
-	ret0, _ := ret[0].(*bedrock.ClaudeResponse)
+	ret0, _ := ret[0].(*llm.LLMResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -110,10 +110,10 @@ func (mr *MockLLMClientMockRecorder) InvokeModel(ctx, request any) *gomock.Call 
 }
 
 // InvokeModelWithRetry mocks base method.
-func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error) {
+func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeModelWithRetry", ctx, request)
-	ret0, _ := ret[0].(*bedrock.ClaudeResponse)
+	ret0, _ := ret[0].(*llm.LLMResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

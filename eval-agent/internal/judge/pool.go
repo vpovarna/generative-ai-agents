@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/rs/zerolog"
 )
 
 // JudgePool builds and manages a collection of judges from configuration
 type JudgePool struct {
-	llmClient LLMClient
+	llmClient llm.LLMClient
 	logger    *zerolog.Logger
 }
 
 // NewJudgePool creates a new judge pool builder
-func NewJudgePool(llmClient LLMClient, logger *zerolog.Logger) *JudgePool {
+func NewJudgePool(llmClient llm.LLMClient, logger *zerolog.Logger) *JudgePool {
 	return &JudgePool{
 		llmClient: llmClient,
 		logger:    logger,
