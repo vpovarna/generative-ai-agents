@@ -34,6 +34,7 @@ Automatically evaluates AI agent responses with **confidence scores** (0.0–1.0
 - **JSON Output** - Machine-readable validation reports for CI/CD integration
 
 ### Configuration & Flexibility
+- **Multi-Provider Support** - Choose between AWS Bedrock Claude or OpenAI GPT models
 - **YAML-Driven Judges** - Edit prompts and parameters without code changes
 - **Per-Judge Configuration** - Independent model settings, retries, and context requirements
 - **Custom Thresholds** - Adjust pass/review/fail boundaries per use case
@@ -69,9 +70,11 @@ User Query + Context + Answer
 
 **Early exit:** If average Stage 1 score < 0.2, returns `fail` verdict without calling LLM (saves cost/latency).
 
-### Stage 2: LLM Judges (Parallel, AWS Bedrock Claude)
+### Stage 2: LLM Judges (Parallel, Multi-Provider)
 
 **Configurable via YAML** - All judges are loaded from `configs/judges.yaml` allowing prompt customization without code changes.
+
+**Provider Support** - Choose between AWS Bedrock Claude or OpenAI GPT models via environment configuration.
 
 | Judge | Evaluates | Scoring Rubric |
 |-------|-----------|----------------|
@@ -158,17 +161,28 @@ go run cmd/batch/main.go \
 ### Prerequisites
 
 - Go 1.21+
-- AWS credentials with Bedrock access (Claude enabled)
+- **AWS credentials with Bedrock access** (if using Bedrock) OR **OpenAI API key** (if using OpenAI)
 
 ### Configuration
 
 Create `.env` in `eval-agent/`:
 
+**Option 1: AWS Bedrock Claude (default)**
 ```env
+DEFAULT_LLM_PROVIDER=bedrock
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
+EVAL_AGENT_API_PORT=18082
+EARLY_EXIT_THRESHOLD=0.2
+```
+
+**Option 2: OpenAI GPT**
+```env
+DEFAULT_LLM_PROVIDER=openai
+OPEN_AI_KEY=sk-...
+OPEN_AI_MODEL_ID=gpt-4o-mini
 EVAL_AGENT_API_PORT=18082
 EARLY_EXIT_THRESHOLD=0.2
 ```
