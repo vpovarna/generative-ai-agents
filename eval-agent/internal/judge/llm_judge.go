@@ -5,29 +5,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"text/template"
 	"time"
 
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/rs/zerolog"
 )
 
 // LLMJudge is a generic judge implementation that uses LLM with configurable prompts.
 type LLMJudge struct {
-	name            string
-	promptTemplate  *template.Template
-	modelConfig     config.ModelConfig
+	name           string
+	promptTemplate *template.Template
+	modelConfig    config.ModelConfig
 	requiresContext bool
-	llmClient       llm.LLMClient
-	logger          *zerolog.Logger
+	llmClient      LLMClient
+	logger         *zerolog.Logger
 }
 
 func NewLLMJudge(
 	judgeCfg config.JudgeConfiguration,
-	llmClient llm.LLMClient,
+	llmClient LLMClient,
 	logger *zerolog.Logger,
 ) (*LLMJudge, error) {
 	tmpl, err := template.New(judgeCfg.Name).Parse(judgeCfg.Prompt)
@@ -81,15 +80,15 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 	}
 
 	// Call LLM
-	var resp *llm.LLMResponse
+	var resp *bedrock.ClaudeResponse
 	if j.modelConfig.Retry {
-		resp, err = j.llmClient.InvokeModelWithRetry(ctx, llm.LLMRequest{
+		resp, err = j.llmClient.InvokeModelWithRetry(ctx, bedrock.ClaudeRequest{
 			Prompt:      prompt,
 			MaxTokens:   j.modelConfig.MaxTokens,
 			Temperature: j.modelConfig.Temperature,
 		})
 	} else {
-		resp, err = j.llmClient.InvokeModel(ctx, llm.LLMRequest{
+		resp, err = j.llmClient.InvokeModel(ctx, bedrock.ClaudeRequest{
 			Prompt:      prompt,
 			MaxTokens:   j.modelConfig.MaxTokens,
 			Temperature: j.modelConfig.Temperature,
@@ -106,10 +105,9 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 		return result
 	}
 
-	// Parse LLM response (strip markdown code blocks if present)
-	content := stripMarkdownCodeBlock(resp.Content)
+	// Parse LLM response
 	var llmResponse judgeResponse
-	if err := json.Unmarshal([]byte(content), &llmResponse); err != nil {
+	if err := json.Unmarshal([]byte(resp.Content), &llmResponse); err != nil {
 		j.logger.Error().
 			Err(err).
 			Str("judge", j.name).
@@ -145,7 +143,7 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 	result.Reason = llmResponse.Reason
 	result.Duration = time.Since(now)
 
-	j.logger.Info().
+	j.logger.Debug().
 		Str("judge", j.name).
 		Float64("score", result.Score).
 		Dur("duration", result.Duration).
@@ -166,30 +164,4 @@ func (j *LLMJudge) buildPrompt(evalCtx models.EvaluationContext) (string, error)
 		return "", fmt.Errorf("template execution failed: %w", err)
 	}
 	return buf.String(), nil
-}
-
-// stripMarkdownCodeBlock removes markdown code block formatting if present
-func stripMarkdownCodeBlock(content string) string {
-	content = strings.TrimSpace(content)
-
-	// Check for markdown code blocks (```json ... ``` or ``` ... ```)
-	if strings.HasPrefix(content, "```") {
-		// Find the first newline (after the opening ```)
-		firstNewline := strings.Index(content, "\n")
-		if firstNewline == -1 {
-			return content
-		}
-
-		// Find the closing ```
-		closingBackticks := strings.LastIndex(content, "```")
-		if closingBackticks == -1 || closingBackticks <= firstNewline {
-			return content
-		}
-
-		// Extract the content between the code blocks
-		content = content[firstNewline+1 : closingBackticks]
-		content = strings.TrimSpace(content)
-	}
-
-	return content
 }

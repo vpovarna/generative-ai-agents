@@ -97,9 +97,9 @@ go run cmd/batch/main.go \
 
 ```bash
 go run cmd/batch/main.go \
-  -input resources/dataset.jsonl \
-  -output resources/results.jsonl \
-  -summary resources/summary.json
+  -input dataset.jsonl \
+  -output results.jsonl \
+  -summary summary.json
 ```
 
 ### Pipeline from stdin
