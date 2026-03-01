@@ -41,7 +41,7 @@ Start the Redis Stream consumer:
 
 ```bash
 cd eval-agent
-go run cmd/main.go
+go run cmd/streaming/main.go
 ```
 
 **Expected output:**

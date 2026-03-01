@@ -202,9 +202,25 @@ REST endpoints for real-time evaluation of agent responses. Supports full pipeli
 - Single judge evaluation with custom thresholds
 - Health check endpoint for monitoring
 
+**Run:** `go run cmd/api/main.go`
+
 **Documentation:** [docs/API_TEST_CASES.md](docs/API_TEST_CASES.md)
 
-### 2. Batch Processing (Offline)
+### 2. Redis Stream Consumer (Asynchronous)
+
+Long-running consumer that processes evaluation requests from Redis Streams for high-throughput asynchronous processing.
+
+**Key capabilities:**
+- Decoupled architecture with message queue
+- Horizontal scaling with multiple consumers
+- Fault tolerance with Redis persistence
+- Graceful shutdown and acknowledgment
+
+**Run:** `go run cmd/streaming/main.go`
+
+**Documentation:** [docs/REDIS.md](docs/REDIS.md)
+
+### 3. Batch Processing (Offline)
 
 CLI tool for offline dataset evaluation with concurrent workers and built-in judge validation.
 
@@ -230,7 +246,7 @@ CLI tool for offline dataset evaluation with concurrent workers and built-in jud
 
 **Documentation:** [docs/BATCH_EVALUATION.md](docs/BATCH_EVALUATION.md)
 
-### 3. MCP Integration (Claude Code/Desktop/Cursor)
+### 4. MCP Integration (Claude Code/Desktop/Cursor)
 
 Expose eval-agent as a tool in Claude Code, Claude Desktop, or Cursor. Enables Claude to evaluate agent responses directly during conversations.
 
