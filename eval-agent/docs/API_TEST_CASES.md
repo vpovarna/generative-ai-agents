@@ -566,6 +566,415 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 ---
 
+## Correctness Judge Tests (Ground Truth Comparison)
+
+The correctness judge evaluates semantic similarity between an answer and expected output (ground truth). It's disabled by default and requires `expected_output` field in requests.
+
+### Test Case 17: Enable Correctness Judge
+
+**Setup:**
+Enable the correctness judge in `configs/judges.yaml`:
+
+```yaml
+judges:
+  evaluators:
+    # ... other judges ...
+
+    - name: correctness
+      enabled: true  # Change from false to true
+      description: "Evaluates semantic similarity between answer and expected output"
+      requires_context: false
+      requires_expected_output: true
+      prompt: |
+        You are a correctness evaluation judge.
+        Compare the provided answer with the expected output (ground truth).
+        Score based on semantic equivalence, not exact string match.
+
+        Answer: {{.Answer}}
+        Expected Output: {{.ExpectedOutput}}
+
+        Scoring guidelines:
+        - 1.0: Semantically identical
+        - 0.8-0.9: Mostly correct, minor differences
+        - 0.5-0.7: Partially correct
+        - 0.2-0.4: Somewhat related but different
+        - 0.0-0.1: Completely different
+
+        Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+        {"score": <float>, "reason": "<string>"}
+      model:
+        max_tokens: 200
+        temperature: 0.0
+        retry: true
+```
+
+**Restart the API server** after enabling the judge.
+
+### Test Case 18: Single Correctness Judge - Exact Match
+
+**Request:**
+```bash
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold=0.8" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-001",
+    "event_type": "agent_response",
+    "agent": {"name": "test-agent", "type": "qa", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is the capital of France?",
+      "answer": "Paris",
+      "expected_output": "Paris"
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "test-correctness-001",
+  "stages": [
+    {
+      "name": "correctness-judge",
+      "score": 1.0,
+      "reason": "The answer and expected output are semantically identical",
+      "duration_ns": 1234567890
+    }
+  ],
+  "confidence": 1.0,
+  "verdict": "pass"
+}
+```
+
+**Expected:**
+- Status Code: 200
+- `confidence` = 1.0 (exact match)
+- `verdict` = "pass"
+- Only 1 stage (correctness judge)
+- Response time: ~1-2 seconds
+
+### Test Case 19: Single Correctness Judge - Semantic Match
+
+**Request:**
+```bash
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold=0.8" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-002",
+    "event_type": "agent_response",
+    "agent": {"name": "test-agent", "type": "qa", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is 2+2?",
+      "answer": "The answer is four",
+      "expected_output": "4"
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "test-correctness-002",
+  "stages": [
+    {
+      "name": "correctness-judge",
+      "score": 0.9,
+      "reason": "Semantically equivalent - both convey the same answer (four/4), just different representations",
+      "duration_ns": 1456789012
+    }
+  ],
+  "confidence": 0.9,
+  "verdict": "pass"
+}
+```
+
+**Expected:**
+- Status Code: 200
+- `confidence` ~0.9 (semantic match despite different format)
+- `verdict` = "pass"
+- Demonstrates that judge understands "four" = "4"
+
+### Test Case 20: Single Correctness Judge - Wrong Answer
+
+**Request:**
+```bash
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold=0.7" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-003",
+    "event_type": "agent_response",
+    "agent": {"name": "test-agent", "type": "qa", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is the capital of Italy?",
+      "answer": "Milan",
+      "expected_output": "Rome"
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "test-correctness-003",
+  "stages": [
+    {
+      "name": "correctness-judge",
+      "score": 0.1,
+      "reason": "Completely different answers - Milan is a city in Italy but not the capital. Expected Rome.",
+      "duration_ns": 1345678901
+    }
+  ],
+  "confidence": 0.1,
+  "verdict": "fail"
+}
+```
+
+**Expected:**
+- Status Code: 200
+- `confidence` ~0.1 (wrong answer)
+- `verdict` = "fail"
+- Correctly identifies that Milan ≠ Rome
+
+### Test Case 21: Full Pipeline with Correctness - All Judges Pass
+
+**Request:**
+```bash
+curl -X POST http://localhost:18082/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-pipeline-001",
+    "event_type": "agent_response",
+    "agent": {"name": "test-agent", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is the capital of France?",
+      "context": "France is a country in Western Europe. Paris is its capital city.",
+      "answer": "The capital of France is Paris.",
+      "expected_output": "Paris"
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "test-correctness-pipeline-001",
+  "stages": [
+    {"name": "length-checker", "score": 1.0, "duration_ns": 15000},
+    {"name": "overlap-checker", "score": 0.85, "duration_ns": 12000},
+    {"name": "format-checker", "score": 1.0, "duration_ns": 10000},
+    {"name": "relevance-judge", "score": 0.95, "duration_ns": 1850000000},
+    {"name": "faithfulness-judge", "score": 1.0, "duration_ns": 1820000000},
+    {"name": "coherence-judge", "score": 1.0, "duration_ns": 1780000000},
+    {"name": "completeness-judge", "score": 1.0, "duration_ns": 1750000000},
+    {"name": "instruction-judge", "score": 1.0, "duration_ns": 1690000000},
+    {"name": "correctness-judge", "score": 1.0, "reason": "Semantically identical to expected output", "duration_ns": 1650000000}
+  ],
+  "confidence": 0.96,
+  "verdict": "pass"
+}
+```
+
+**Expected:**
+- Status Code: 200
+- `confidence` > 0.9
+- `verdict` = "pass"
+- **9 stages** (3 prechecks + 6 judges including correctness)
+- All judges score high
+- Response time: ~3-4 seconds (judges run in parallel)
+
+### Test Case 22: Full Pipeline with Correctness - Wrong Answer
+
+**Request:**
+```bash
+curl -X POST http://localhost:18082/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-pipeline-002",
+    "event_type": "agent_response",
+    "agent": {"name": "test-agent", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is 10 + 5?",
+      "context": "Basic arithmetic operations.",
+      "answer": "The answer is 20.",
+      "expected_output": "15"
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "test-correctness-pipeline-002",
+  "stages": [
+    {"name": "length-checker", "score": 1.0, "duration_ns": 14000},
+    {"name": "overlap-checker", "score": 0.6, "duration_ns": 11000},
+    {"name": "format-checker", "score": 1.0, "duration_ns": 9000},
+    {"name": "relevance-judge", "score": 0.8, "duration_ns": 1950000000},
+    {"name": "faithfulness-judge", "score": 0.9, "duration_ns": 1880000000},
+    {"name": "coherence-judge", "score": 1.0, "duration_ns": 1820000000},
+    {"name": "completeness-judge", "score": 0.9, "duration_ns": 1790000000},
+    {"name": "instruction-judge", "score": 1.0, "duration_ns": 1750000000},
+    {"name": "correctness-judge", "score": 0.0, "reason": "Completely different - answer says 20 but expected output is 15", "duration_ns": 1680000000}
+  ],
+  "confidence": 0.65,
+  "verdict": "review"
+}
+```
+
+**Expected:**
+- Status Code: 200
+- `confidence` ~0.65 (dragged down by correctness score of 0.0)
+- `verdict` = "review" or "fail"
+- 9 stages (full pipeline)
+- Other judges score reasonably (answer is coherent, relevant, faithful to context)
+- **Correctness judge: 0.0** - correctly identifies 20 ≠ 15
+- Demonstrates that correctness judge catches factual errors even when other quality dimensions are fine
+
+### Test Case 23: Correctness Judge Auto-Skip (No Expected Output)
+
+**Request:**
+```bash
+curl -X POST http://localhost:18082/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-skip",
+    "event_type": "agent_response",
+    "agent": {"name": "test-agent", "type": "rag", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is machine learning?",
+      "context": "ML is a subset of AI.",
+      "answer": "Machine learning is a method where computers learn from data."
+    }
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "test-correctness-skip",
+  "stages": [
+    {"name": "length-checker", "score": 1.0, "duration_ns": 15000},
+    {"name": "overlap-checker", "score": 0.75, "duration_ns": 12000},
+    {"name": "format-checker", "score": 1.0, "duration_ns": 10000},
+    {"name": "relevance-judge", "score": 0.95, "duration_ns": 1850000000},
+    {"name": "faithfulness-judge", "score": 0.9, "duration_ns": 1820000000},
+    {"name": "coherence-judge", "score": 1.0, "duration_ns": 1780000000},
+    {"name": "completeness-judge", "score": 0.9, "duration_ns": 1750000000},
+    {"name": "instruction-judge", "score": 1.0, "duration_ns": 1690000000}
+  ],
+  "confidence": 0.89,
+  "verdict": "pass"
+}
+```
+
+**Expected:**
+- Status Code: 200
+- **8 stages** (3 prechecks + 5 judges - correctness judge auto-skipped)
+- No correctness stage in results (because `expected_output` not provided)
+- No errors or warnings
+- Demonstrates backwards compatibility - requests without `expected_output` work unchanged
+
+**Server logs:**
+```
+DEBUG skipping judge - expected_output not provided judge=correctness
+DEBUG all judges completed judgeCount=5
+```
+
+---
+
+## Batch Evaluation with Correctness
+
+### Test Case 24: Batch Correctness Evaluation
+
+**Setup:**
+Create a test file `test_correctness_batch.jsonl`:
+
+```jsonl
+{"event_id": "batch-001", "event_type": "agent_response", "agent": {"name": "test"}, "interaction": {"user_query": "Capital of France?", "answer": "Paris", "expected_output": "Paris"}}
+{"event_id": "batch-002", "event_type": "agent_response", "agent": {"name": "test"}, "interaction": {"user_query": "2+2?", "answer": "4", "expected_output": "Four"}}
+{"event_id": "batch-003", "event_type": "agent_response", "agent": {"name": "test"}, "interaction": {"user_query": "Capital of Italy?", "answer": "Milan", "expected_output": "Rome"}}
+{"event_id": "batch-004", "event_type": "agent_response", "agent": {"name": "test"}, "interaction": {"user_query": "What is Go?", "answer": "A programming language", "expected_output": "Go is a programming language created by Google"}}
+```
+
+**Run batch evaluation:**
+```bash
+go run cmd/batch/main.go \
+  -input test_correctness_batch.jsonl \
+  -output correctness_results.jsonl \
+  -workers 2
+```
+
+**Expected output file `correctness_results.jsonl`:**
+```jsonl
+{"id":"batch-001","stages":[{"name":"correctness-judge","score":1.0,"reason":"Exact match"}],"confidence":0.95,"verdict":"pass"}
+{"id":"batch-002","stages":[{"name":"correctness-judge","score":0.9,"reason":"Semantically equivalent"}],"confidence":0.88,"verdict":"pass"}
+{"id":"batch-003","stages":[{"name":"correctness-judge","score":0.1,"reason":"Wrong answer - Milan is not Rome"}],"confidence":0.35,"verdict":"fail"}
+{"id":"batch-004","stages":[{"name":"correctness-judge","score":0.7,"reason":"Partially correct - missing details"}],"confidence":0.68,"verdict":"review"}
+```
+
+**Console summary:**
+```
+INFO Starting batch evaluation input=test_correctness_batch.jsonl output=correctness_results.jsonl workers=2
+INFO Worker pool finished
+INFO Batch evaluation complete duration=8.234s total_records=4 success=4 errors=0
+```
+
+**Verify results:**
+```bash
+# Extract only correctness scores
+jq -r '.stages[] | select(.name == "correctness-judge") | "\(.score) - \(.reason)"' correctness_results.jsonl
+
+# Output:
+# 1.0 - Exact match
+# 0.9 - Semantically equivalent
+# 0.1 - Wrong answer - Milan is not Rome
+# 0.7 - Partially correct - missing details
+```
+
+**Expected:**
+- All 4 records processed successfully
+- Correctness judge runs for all records (all have `expected_output`)
+- Scores reflect semantic similarity:
+  - 1.0 for exact match (Paris = Paris)
+  - 0.9 for semantic match (4 = Four)
+  - 0.1 for wrong answer (Milan ≠ Rome)
+  - 0.7 for partial match (missing details but correct core fact)
+
+### Use Case: Regression Testing
+
+**Scenario:** Test if your agent's performance changed after an update.
+
+```bash
+# 1. Create golden dataset with expected outputs
+cat > golden_test_suite.jsonl << 'EOF'
+{"event_id":"reg-001","event_type":"agent_response","agent":{"name":"my-agent","version":"1.0"},"interaction":{"user_query":"What is 5*6?","answer":"30","expected_output":"30"}}
+{"event_id":"reg-002","event_type":"agent_response","agent":{"name":"my-agent","version":"1.0"},"interaction":{"user_query":"Capital of Spain?","answer":"Madrid","expected_output":"Madrid"}}
+{"event_id":"reg-003","event_type":"agent_response","agent":{"name":"my-agent","version":"1.0"},"interaction":{"user_query":"Boiling point of water?","answer":"100°C","expected_output":"100 degrees Celsius"}}
+EOF
+
+# 2. Run evaluation
+go run cmd/batch/main.go -input golden_test_suite.jsonl -output regression_v1.jsonl
+
+# 3. Calculate average correctness score
+jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' regression_v1.jsonl
+# Output: 0.95  (average correctness score)
+
+# 4. After agent update, run again
+go run cmd/batch/main.go -input golden_test_suite.jsonl -output regression_v2.jsonl
+jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' regression_v2.jsonl
+# Output: 0.93  (slight regression detected)
+
+# 5. Compare line-by-line
+paste <(jq -r '.stages[] | select(.name == "correctness-judge") | .score' regression_v1.jsonl) \
+      <(jq -r '.stages[] | select(.name == "correctness-judge") | .score' regression_v2.jsonl) | \
+      awk '{printf "%.2f -> %.2f (%.2f change)\n", $1, $2, $2-$1}'
+# Output:
+# 1.00 -> 1.00 (0.00 change)
+# 1.00 -> 0.95 (−0.05 change)  ← identified regression
+# 0.90 -> 0.85 (−0.05 change)  ← identified regression
+```
+
+---
+
 ## Debugging Tips
 
 ### Check Server Logs
@@ -620,7 +1029,7 @@ DBG all judges completed judgeCount=5
 
 ## Summary
 
-**Total Test Cases:** 16
+**Total Test Cases:** 24
 
 **Categories:**
 - Health Check: 1 test
@@ -630,8 +1039,12 @@ DBG all judges completed judgeCount=5
 - Performance: 2 tests
 - Edge Cases: 2 tests
 - Multi-Provider: 1 test
+- Correctness Judge (API): 7 tests
+- Batch Correctness: 1 test
 
 **Expected Pass Rate:** 100% (all tests should pass with a properly configured environment)
+
+**Note:** Correctness judge tests (17-24) require enabling the correctness judge in `configs/judges.yaml` by setting `enabled: true`.
 
 **Configuration Requirements:**
 - Valid AWS credentials (if using Bedrock)

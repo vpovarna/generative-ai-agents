@@ -214,7 +214,7 @@ EARLY_EXIT_THRESHOLD=0.2
 
 Then each judge specifies its own `modelFamily` and `modelID` in `configs/judges.yaml` (see [Judge Configuration](#judge-configuration)).
 
-Judges are configured in `configs/judges.yaml` - see [Judge Configuration](#judge-configuration) section.
+Judges are configured in `configs/judges.yaml`. By default, 5 judges are enabled (relevance, faithfulness, coherence, completeness, instruction). The **correctness judge** is disabled by default - enable it in `judges.yaml` for ground truth comparison. See [Judge Configuration](#judge-configuration) and [Correctness Evaluation](#correctness-evaluation-ground-truth-comparison) sections.
 
 ---
 
@@ -484,111 +484,170 @@ The correctness judge **automatically skips** when `expected_output` is not prov
 
 ### API Usage
 
-**Full pipeline with expected output:**
+**Single correctness judge (fast, isolated test):**
 ```bash
-curl -X POST http://localhost:18082/api/v1/evaluate \
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold=0.8" \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-correctness-1",
     "event_type": "agent_response",
     "agent": {"name": "my-agent", "version": "1.0"},
     "interaction": {
-      "user_query": "What is the capital of France?",
-      "answer": "Paris is the capital of France.",
-      "expected_output": "Paris"
+      "user_query": "What is 2+2?",
+      "answer": "The answer is four",
+      "expected_output": "4"
     }
   }'
 ```
 
-**Single correctness judge only:**
+**Response:**
+```json
+{
+  "id": "test-correctness-1",
+  "stages": [{"name": "correctness-judge", "score": 0.9}],
+  "confidence": 0.9,
+  "verdict": "pass"
+}
+```
+
+**Full pipeline (all judges including correctness):**
 ```bash
-curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold=0.8" \
+curl -X POST http://localhost:18082/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": "test-correctness-2",
     "event_type": "agent_response",
     "agent": {"name": "my-agent", "version": "1.0"},
     "interaction": {
-      "user_query": "What is 2+2?",
-      "answer": "The answer is 4",
-      "expected_output": "4"
+      "user_query": "What is the capital of France?",
+      "context": "France is a country in Western Europe.",
+      "answer": "The capital of France is Paris.",
+      "expected_output": "Paris"
     }
   }'
 ```
 
-### Batch Evaluation with Ground Truth
-
-Prepare a JSONL file with expected outputs:
-
-```jsonl
-{"event_id": "test-1", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "Capital of France?", "answer": "Paris", "expected_output": "Paris"}}
-{"event_id": "test-2", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "2+2?", "answer": "4", "expected_output": "Four"}}
-{"event_id": "test-3", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "What is Go?", "answer": "Programming language", "expected_output": "A programming language created by Google"}}
+**Response:**
+```json
+{
+  "id": "test-correctness-2",
+  "stages": [
+    {"name": "length-checker", "score": 1.0},
+    {"name": "overlap-checker", "score": 0.85},
+    {"name": "format-checker", "score": 1.0},
+    {"name": "relevance-judge", "score": 0.95},
+    {"name": "faithfulness-judge", "score": 1.0},
+    {"name": "coherence-judge", "score": 1.0},
+    {"name": "completeness-judge", "score": 1.0},
+    {"name": "instruction-judge", "score": 1.0},
+    {"name": "correctness-judge", "score": 1.0}
+  ],
+  "confidence": 0.96,
+  "verdict": "pass"
+}
 ```
 
-Run batch evaluation:
+### Batch Evaluation with Ground Truth
+
+**1. Prepare test data with expected outputs:**
+
+```bash
+cat > test_correctness.jsonl << 'EOF'
+{"event_id": "test-1", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "Capital of France?", "answer": "Paris", "expected_output": "Paris"}}
+{"event_id": "test-2", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "2+2?", "answer": "4", "expected_output": "Four"}}
+{"event_id": "test-3", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "Capital of Italy?", "answer": "Milan", "expected_output": "Rome"}}
+EOF
+```
+
+**2. Run batch evaluation:**
 ```bash
 go run cmd/batch/main.go \
-  -input test_data_with_ground_truth.jsonl \
+  -input test_correctness.jsonl \
   -output results.jsonl \
-  -workers 5
+  -workers 3
+```
+
+**3. Extract correctness scores:**
+```bash
+jq -r '.stages[] | select(.name == "correctness-judge") | "\(.score) - \(.reason)"' results.jsonl
+```
+
+**Output:**
+```
+1.0 - Exact match
+0.9 - Semantically equivalent (4 = Four)
+0.1 - Wrong answer - Milan is not Rome
 ```
 
 ### MCP Integration
 
-When using the MCP server with Claude Code/Desktop/Cursor, provide the `expected_output` field:
+When using eval-agent with Claude Code/Desktop/Cursor, add `expected_output` to evaluate correctness:
 
-```typescript
-// evaluate_response tool
+**Example in Claude Code:**
+```
+Use the evaluate_response tool to check if my answer is correct.
+
+Query: "What is the capital of France?"
+Answer: "Paris"
+Expected: "Paris"
+```
+
+Claude will call:
+```json
 {
   "event_id": "mcp-test-1",
   "user_query": "What is the capital of France?",
   "answer": "Paris",
-  "expected_output": "Paris"  // Optional - correctness judge runs if provided
-}
-
-// evaluate_single_judge tool (correctness only)
-{
-  "event_id": "mcp-test-2",
-  "user_query": "What is 2+2?",
-  "answer": "Four",
-  "judge_name": "correctness",
-  "threshold": 0.8,
-  "expected_output": "4"  // Required for correctness judge
+  "expected_output": "Paris"
 }
 ```
+
+**Single correctness judge:**
+```
+Use evaluate_single_judge with judge_name="correctness" to check my math.
+
+Query: "What is 2+2?"
+Answer: "Four"
+Expected: "4"
+```
+
+See [docs/MCP_TEST_CASES.md](docs/MCP_TEST_CASES.md) for full MCP examples.
 
 ### Use Cases
 
-**Regression Testing:**
+**1. Regression Testing** - Detect performance degradation across releases:
 ```bash
-# Golden dataset with expected outputs
-go run cmd/batch/main.go -input golden_test_suite.jsonl -output regression_results.jsonl
+# Run on v1.0
+go run cmd/batch/main.go -input golden_suite.jsonl -output v1_results.jsonl
 
-# Check if average confidence dropped
-jq -s '[.[].confidence] | add/length' regression_results.jsonl
+# Calculate baseline score
+jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' v1_results.jsonl
+# Output: 0.95
+
+# After update, run on v2.0
+go run cmd/batch/main.go -input golden_suite.jsonl -output v2_results.jsonl
+jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' v2_results.jsonl
+# Output: 0.93  ← detected 2% regression
 ```
 
-**Benchmark Evaluation:**
+**2. Benchmark Evaluation** - Score against standardized test suites:
 ```bash
-# Evaluate against standard benchmark (e.g., TruthfulQA, MMLU-style)
-go run cmd/batch/main.go -input benchmark_with_answers.jsonl -output benchmark_scores.jsonl
+# Evaluate on TruthfulQA or custom benchmark
+go run cmd/batch/main.go -input benchmark_qa.jsonl -output scores.jsonl
 
-# Extract correctness scores only
-jq '.stages[] | select(.name == "correctness") | {event_id: .id, score: .score}' benchmark_scores.jsonl
+# Summary report
+jq -s 'group_by(.verdict) | map({verdict: .[0].verdict, count: length})' scores.jsonl
+# Output: [{"verdict":"pass","count":45}, {"verdict":"fail","count":5}]
 ```
 
-**A/B Testing:**
+**3. A/B Testing** - Compare two agent versions:
 ```bash
-# Test agent v1.0
-go run cmd/batch/main.go -input test_suite.jsonl -output agent_v1_results.jsonl
+# Compare v1 vs v2 on same test set
+jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' v1_results.jsonl
+# Output: 0.87
 
-# Test agent v2.0
-go run cmd/batch/main.go -input test_suite.jsonl -output agent_v2_results.jsonl
-
-# Compare correctness scores
-jq -s 'map(.stages[] | select(.name == "correctness") | .score) | add/length' agent_v1_results.jsonl
-jq -s 'map(.stages[] | select(.name == "correctness") | .score) | add/length' agent_v2_results.jsonl
+jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' v2_results.jsonl
+# Output: 0.91  ← v2 is 4% better
 ```
 
 ---
@@ -617,9 +676,10 @@ jq -s 'map(.stages[] | select(.name == "correctness") | .score) | add/length' ag
 |---------|------------|-------------------------|
 | **Validation** | Built-in Kendall's τ correlation | No validation |
 | **Cost Optimization** | Early exit with prechecks | Always call LLM |
-| **Dimensions** | 5 parallel judges | 1-2 judges |
+| **Dimensions** | 6 judges (relevance, faithfulness, coherence, completeness, instruction, correctness) | 1-2 judges |
+| **Ground Truth** | Optional correctness evaluation with auto-skip | Not supported |
 | **Multi-Provider** | Mix AWS Bedrock + OpenAI per judge | Single provider only |
-| **Integration** | API + Batch + MCP | Batch only |
+| **Integration** | API + Batch + MCP + Redis Streams | Batch only |
 | **Configuration** | YAML-driven, no code changes | Code changes required |
 | **Output** | Confidence + Verdict + Stages | Score only |
 | **Context Support** | RAG-optimized (query + context + answer) | Query + answer only |
