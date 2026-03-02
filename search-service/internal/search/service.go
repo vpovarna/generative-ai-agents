@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/database"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/embedding"
+	"github.com/povarna/generative-ai-agents/search-service/internal/database"
+	"github.com/povarna/generative-ai-agents/search-service/internal/embedding"
 )
 
 type Service struct {

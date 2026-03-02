@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/database"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/embedding"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/ingestion"
+	"github.com/povarna/generative-ai-agents/search-service/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/search-service/internal/database"
+	"github.com/povarna/generative-ai-agents/search-service/internal/embedding"
+	"github.com/povarna/generative-ai-agents/search-service/internal/ingestion"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -62,9 +62,8 @@ func main() {
 	log.Info().Msg("Database connected")
 
 	region := os.Getenv("AWS_REGION")
-	modelID := os.Getenv("CLAUDE_MODEL_ID")
 
-	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
+	bedrockClient, err := bedrock.NewClient(ctx, region)
 
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to create bedrock client")

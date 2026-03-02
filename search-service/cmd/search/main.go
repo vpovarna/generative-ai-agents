@@ -9,10 +9,10 @@ import (
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/joho/godotenv"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/bedrock"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/database"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/embedding"
-	"github.com/povarna/generative-ai-agents/kg-agent/internal/search"
+	"github.com/povarna/generative-ai-agents/search-service/internal/bedrock"
+	"github.com/povarna/generative-ai-agents/search-service/internal/database"
+	"github.com/povarna/generative-ai-agents/search-service/internal/embedding"
+	"github.com/povarna/generative-ai-agents/search-service/internal/search"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -50,7 +50,7 @@ func main() {
 
 	// Initialize Bedrock client for embeddings
 	region := os.Getenv("AWS_REGION")
-	bedrockClient, err := bedrock.NewClient(ctx, region, "")
+	bedrockClient, err := bedrock.NewClient(ctx, region)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create Bedrock client")
 	}
