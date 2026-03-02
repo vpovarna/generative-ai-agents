@@ -40,6 +40,14 @@ Each line is a JSON object with the same structure as the API request:
 {"event_id":"eval-002","event_type":"agent_response","agent":{"name":"my-agent","type":"rag","version":"1.0"},"interaction":{"user_query":"What is AI?","context":"AI stands for Artificial Intelligence.","answer":"AI is the simulation of human intelligence by machines."}}
 ```
 
+**Optional fields:**
+- `expected_output` - For correctness evaluation (ground truth comparison). Only used if correctness judge is enabled in `judges.yaml`.
+
+**Example with expected_output:**
+```jsonl
+{"event_id":"eval-003","event_type":"agent_response","agent":{"name":"my-agent","type":"rag","version":"1.0"},"interaction":{"user_query":"What is 2+2?","context":"Basic math.","answer":"Four","expected_output":"4"}}
+```
+
 ## Output Formats
 
 ### JSONL Output (Default)
@@ -47,9 +55,17 @@ Each line is a JSON object with the same structure as the API request:
 One evaluation result per line, directly pipeable to `jq`:
 
 ```jsonl
-{"id":"eval-001","stages":[{"name":"length-checker","score":1.0,"reason":"...","duration_ns":12500}],"confidence":0.92,"verdict":"pass"}
-{"id":"eval-002","stages":[{"name":"relevance-judge","score":0.88,"reason":"...","duration_ns":820000000}],"confidence":0.85,"verdict":"pass"}
+{"id":"eval-001","stages":[{"name":"length-checker","score":1.0,"reason":"Answer Length is acceptable","duration_ns":12500},{"name":"overlap-checker","score":0.85,"duration_ns":10000},{"name":"format-checker","score":1.0,"duration_ns":8500},{"name":"relevance-judge","score":0.95,"duration_ns":1850000000},{"name":"faithfulness-judge","score":1.0,"duration_ns":1820000000},{"name":"coherence-judge","score":1.0,"duration_ns":1780000000},{"name":"completeness-judge","score":1.0,"duration_ns":1750000000},{"name":"instruction-judge","score":1.0,"duration_ns":1690000000}],"confidence":0.92,"verdict":"pass"}
+{"id":"eval-002","stages":[{"name":"length-checker","score":1.0,"duration_ns":14000},{"name":"overlap-checker","score":0.78,"duration_ns":11000},{"name":"format-checker","score":1.0,"duration_ns":9000},{"name":"relevance-judge","score":0.88,"reason":"Relevant answer","duration_ns":1820000000},{"name":"faithfulness-judge","score":0.9,"duration_ns":1780000000},{"name":"coherence-judge","score":1.0,"duration_ns":1750000000},{"name":"completeness-judge","score":0.9,"duration_ns":1720000000},{"name":"instruction-judge","score":1.0,"duration_ns":1680000000}],"confidence":0.85,"verdict":"pass"}
 ```
+
+**Response structure** (same as API):
+- `id`: Event ID from input
+- `stages`: Array of all checker and judge results
+  - **8 stages** when correctness judge disabled (3 prechecks + 5 judges)
+  - **9 stages** when correctness judge enabled (3 prechecks + 6 judges)
+- `confidence`: Aggregated confidence score (0.0-1.0)
+- `verdict`: Final verdict ("pass", "review", or "fail")
 
 ### Summary Output
 

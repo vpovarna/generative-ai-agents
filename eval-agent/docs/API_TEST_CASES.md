@@ -576,6 +576,8 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 The correctness judge evaluates semantic similarity between an answer and expected output (ground truth). It's disabled by default and requires `expected_output` field in requests.
 
+**Quick Start:** For automated validation of your correctness judge setup, see [VALIDATION_CORRECTNESS.md](VALIDATION_CORRECTNESS.md) - includes a script to test all scenarios automatically.
+
 **Important Notes:**
 - These test cases show **expected patterns** - actual scores may vary slightly depending on the LLM's response
 - **Enable the correctness judge first** (see Test Case 17) before running tests 18-24
