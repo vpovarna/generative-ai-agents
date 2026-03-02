@@ -377,36 +377,56 @@ func setupTestAPI(t *testing.T) *restful.Container {
 	logger := zerolog.Nop()
 
 	// Create REAL LLM client (not mocked!)
-	var llmClient llm.LLMClient
+	var registry *llm.LLMClientRegistry
 
 	switch provider {
 	case "bedrock":
 		region := os.Getenv("AWS_REGION")
-		modelID := os.Getenv("CLAUDE_MODEL_ID")
-
-		if region == "" || modelID == "" {
-			t.Skip("Skipping real Bedrock integration - AWS_REGION or CLAUDE_MODEL_ID not set")
+		modelID := os.Getenv("DEFAULT_MODEL_ID")
+		modelFamily := os.Getenv("DEFAULT_MODEL_FAMILY")
+		if modelFamily == "" {
+			modelFamily = "anthropic"
 		}
 
-		llmClient, err = bedrock.NewClient(ctx, region, modelID)
+		if region == "" || modelID == "" {
+			t.Skip("Skipping real Bedrock integration - AWS_REGION or DEFAULT_MODEL_ID not set")
+		}
+
+		llmClient, err := bedrock.NewClient(ctx, region, modelID)
 		if err != nil {
 			t.Fatalf("Failed to create Bedrock client: %v", err)
 		}
 		t.Logf("Using REAL AWS Bedrock: region=%s, model=%s", region, modelID)
 
+		registry = llm.NewLLMClientRegistry(map[llm.LLMFamily]map[string]llm.LLMClient{
+			llm.LLMFamily(modelFamily): {
+				modelID: llmClient,
+			},
+		})
+
 	case "openai":
 		apiKey := os.Getenv("OPEN_AI_KEY")
 		modelID := os.Getenv("OPEN_AI_MODEL_ID")
+		modelFamily := os.Getenv("DEFAULT_MODEL_FAMILY")
+		if modelFamily == "" {
+			modelFamily = "openai"
+		}
 
 		if apiKey == "" || modelID == "" {
 			t.Skip("Skipping real OpenAI integration - OPEN_AI_KEY or OPEN_AI_MODEL_ID not set")
 		}
 
-		llmClient, err = gpt.NewClient(apiKey, modelID)
+		llmClient, err := gpt.NewClient(apiKey, modelID)
 		if err != nil {
 			t.Fatalf("Failed to create OpenAI client: %v", err)
 		}
 		t.Logf("Using REAL OpenAI GPT: model=%s", modelID)
+
+		registry = llm.NewLLMClientRegistry(map[llm.LLMFamily]map[string]llm.LLMClient{
+			llm.LLMFamily(modelFamily): {
+				modelID: llmClient,
+			},
+		})
 
 	default:
 		t.Fatalf("Unknown LLM provider: %s (expected 'bedrock' or 'openai')", provider)
@@ -418,7 +438,7 @@ func setupTestAPI(t *testing.T) *restful.Container {
 		t.Fatalf("Failed to load judges config: %v", err)
 	}
 
-	judgePool := judge.NewJudgePool(llmClient, &logger)
+	judgePool := judge.NewJudgePool(registry, &logger)
 	judges, err := judgePool.BuildFromConfig(judgesConfig)
 	if err != nil {
 		t.Fatalf("Failed to build judges: %v", err)

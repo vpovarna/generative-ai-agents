@@ -34,9 +34,9 @@ Automatically evaluates AI agent responses with **confidence scores** (0.0–1.0
 - **JSON Output** - Machine-readable validation reports for CI/CD integration
 
 ### Configuration & Flexibility
-- **Multi-Provider Support** - Choose between AWS Bedrock Claude or OpenAI GPT models
+- **Multi-Provider Support** - Mix AWS Bedrock Claude and OpenAI GPT models in a single pipeline
 - **YAML-Driven Judges** - Edit prompts and parameters without code changes
-- **Per-Judge Configuration** - Independent model settings, retries, and context requirements
+- **Per-Judge Model Selection** - Each judge can use a different LLM provider and model
 - **Custom Thresholds** - Adjust pass/review/fail boundaries per use case
 - **Multiple Output Formats** - JSONL for streaming, summary for analytics
 
@@ -74,7 +74,7 @@ User Query + Context + Answer
 
 **Configurable via YAML** - All judges are loaded from `configs/judges.yaml` allowing prompt customization without code changes.
 
-**Provider Support** - Choose between AWS Bedrock Claude or OpenAI GPT models via environment configuration.
+**Multi-Provider Support** - Each judge can use a different LLM provider. Mix AWS Bedrock Claude and OpenAI GPT models in the same evaluation pipeline. Configure per-judge in YAML.
 
 | Judge | Evaluates | Scoring Rubric |
 |-------|-----------|----------------|
@@ -173,7 +173,8 @@ DEFAULT_LLM_PROVIDER=bedrock
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
-CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
+DEFAULT_MODEL_FAMILY="anthropic"
+DEFAULT_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
 EVAL_AGENT_API_PORT=18082
 EARLY_EXIT_THRESHOLD=0.2
 ```
@@ -182,10 +183,34 @@ EARLY_EXIT_THRESHOLD=0.2
 ```env
 DEFAULT_LLM_PROVIDER=openai
 OPEN_AI_KEY=sk-...
+DEFAULT_MODEL_FAMILY="openai"
 OPEN_AI_MODEL_ID=gpt-4o-mini
 EVAL_AGENT_API_PORT=18082
 EARLY_EXIT_THRESHOLD=0.2
 ```
+
+**Option 3: Multi-Provider (Mixed Models)**
+
+You can configure both AWS Bedrock and OpenAI simultaneously, allowing different judges to use different providers. Just provide the credentials - each judge specifies its own model in `judges.yaml`:
+
+```env
+# AWS Bedrock credentials (if any judge uses Bedrock)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+
+# OpenAI credentials (if any judge uses OpenAI)
+OPEN_AI_KEY=sk-...
+
+# Default fallback (used by judges.yaml if not overridden)
+DEFAULT_MODEL_FAMILY="anthropic"
+DEFAULT_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0
+
+EVAL_AGENT_API_PORT=18082
+EARLY_EXIT_THRESHOLD=0.2
+```
+
+Then each judge specifies its own `modelFamily` and `modelID` in `configs/judges.yaml` (see [Judge Configuration](#judge-configuration)).
 
 Judges are configured in `configs/judges.yaml` - see [Judge Configuration](#judge-configuration) section.
 
@@ -294,6 +319,8 @@ Judges are defined in `configs/judges.yaml`:
 ```yaml
 judges:
   default_model:
+    modelFamily: "anthropic"
+    modelID: us.anthropic.claude-3-5-haiku-20241022-v1:0
     max_tokens: 256
     temperature: 0.0
     retry: true
@@ -303,6 +330,8 @@ judges:
       enabled: true
       requires_context: false
       model:
+        modelFamily: "anthropic"
+        modelID: us.anthropic.claude-3-5-sonnet-20241022-v2:0
         max_tokens: 256
         temperature: 0.0
         retry: false
@@ -314,11 +343,41 @@ judges:
         Answer: {{.Answer}}
 
         {"score": <float>, "reason": "<string>"}
+
+    - name: coherence
+      enabled: true
+      requires_context: false
+      model:
+        modelFamily: "openai"
+        modelID: gpt-4o-mini
+        max_tokens: 256
+        temperature: 0.0
+        retry: true
+      prompt: |
+        Evaluate the logical consistency of this answer...
 ```
+
+**Key Configuration Options:**
+
+- `modelFamily`: LLM provider family (`"anthropic"` for AWS Bedrock Claude, `"openai"` for OpenAI GPT)
+- `modelID`: Specific model identifier (e.g., `us.anthropic.claude-3-5-sonnet-20241022-v2:0`, `gpt-4o-mini`)
+- `max_tokens`: Maximum tokens for judge response
+- `temperature`: Model temperature (0.0 for deterministic)
+- `retry`: Enable automatic retry with exponential backoff
+- `requires_context`: Whether judge needs retrieved context (for RAG evaluation)
+
+**Multi-Provider Support:**
+
+Each judge can use a different model family and model ID. The system maintains a registry of LLM clients and automatically selects the correct client based on the judge's configuration:
+
+- Judge A → Claude Sonnet (anthropic)
+- Judge B → GPT-4o-mini (openai)
+- Judge C → Claude Haiku (anthropic)
 
 **Benefits:**
 - Edit prompts without code changes
 - Enable/disable judges per deployment
+- **Mix multiple LLM providers** in a single evaluation pipeline
 - Override model settings per judge
 - A/B test different configurations
 - Validate changes with Kendall's correlation before deploying
@@ -358,6 +417,7 @@ judges:
 | **Validation** | Built-in Kendall's τ correlation | No validation |
 | **Cost Optimization** | Early exit with prechecks | Always call LLM |
 | **Dimensions** | 5 parallel judges | 1-2 judges |
+| **Multi-Provider** | Mix AWS Bedrock + OpenAI per judge | Single provider only |
 | **Integration** | API + Batch + MCP | Batch only |
 | **Configuration** | YAML-driven, no code changes | Code changes required |
 | **Output** | Confidence + Verdict + Stages | Score only |

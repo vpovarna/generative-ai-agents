@@ -14,6 +14,7 @@ import (
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/stream"
@@ -36,13 +37,25 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// Initialize Bedrock client for embeddings
+	// Initialize Bedrock client
 	region := os.Getenv("AWS_REGION")
-	modelID := os.Getenv("CLAUDE_MODEL_ID")
+	modelID := os.Getenv("DEFAULT_MODEL_ID")
+	modelFamily := os.Getenv("DEFAULT_MODEL_FAMILY")
+	if modelFamily == "" {
+		modelFamily = "anthropic"
+	}
+
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create Bedrock client")
 	}
+
+	// Create LLM client registry
+	registry := llm.NewLLMClientRegistry(map[llm.LLMFamily]map[string]llm.LLMClient{
+		llm.LLMFamily(modelFamily): {
+			modelID: bedrockClient,
+		},
+	})
 
 	// Redis client
 	streamCfg := &stream.StreamConfig{
@@ -80,7 +93,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to load judges config")
 	}
 
-	judgePool := judge.NewJudgePool(bedrockClient, &logger)
+	judgePool := judge.NewJudgePool(registry, &logger)
 	judges, err := judgePool.BuildFromConfig(judgesConfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to build judges from config")

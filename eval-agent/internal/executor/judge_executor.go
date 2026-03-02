@@ -14,13 +14,13 @@ type JudgeFactory interface {
 }
 
 type JudgeExecutor struct {
-	judges JudgeFactory
+	judgeFactory JudgeFactory
 	logger *zerolog.Logger
 }
 
-func NewJudgeExecutor(judges JudgeFactory, logger *zerolog.Logger) *JudgeExecutor {
+func NewJudgeExecutor(judgeFactory JudgeFactory, logger *zerolog.Logger) *JudgeExecutor {
 	return &JudgeExecutor{
-		judges: judges,
+		judgeFactory: judgeFactory,
 		logger: logger,
 	}
 }
@@ -36,7 +36,7 @@ func (e *JudgeExecutor) Execute(ctx context.Context, judgeName string, threshold
 		Stages: []models.StageResult{},
 	}
 
-	judge, err := e.judges.Get(judgeName)
+	judge, err := e.judgeFactory.Get(judgeName)
 	if err != nil {
 		e.logger.Error().Err(err).Str("judgeName", judgeName).Msg("Judge not found")
 		return result, ErrJudgeNotFound

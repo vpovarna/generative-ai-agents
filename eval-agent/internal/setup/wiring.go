@@ -48,9 +48,9 @@ func LoadConfig() *Config {
 }
 
 func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependencies, error) {
-	llmClient, err := createLLMClient(ctx, cfg.DefaultProvider, cfg)
+	registry, err := createLLMClientRegistry(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Bedrock client: %w", err)
+		return nil, fmt.Errorf("failed to create LLM client registry: %w", err)
 	}
 
 	// PreChecks
@@ -67,7 +67,7 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 	}
 
 	// Create judge pool and build judges from config
-	judgePool := judge.NewJudgePool(llmClient, logger)
+	judgePool := judge.NewJudgePool(registry, logger)
 	judges, err := judgePool.BuildFromConfig(judgesConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build judges from config: %w", err)
@@ -116,13 +116,37 @@ func getEnvFloat(key string, defaultValue float64) float64 {
 	return value
 }
 
-func createLLMClient(ctx context.Context, provider string, cfg *Config) (llm.LLMClient, error) {
-	switch provider {
-	case "bedrock":
-		return bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
-	case "openai":
-		return gpt.NewClient(cfg.OpenAIKey, cfg.OpenAIModelID)
-	default:
-		return bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
+//TODO: Replace this with an proper llm_config.yaml file
+func createLLMClientRegistry(ctx context.Context, cfg *Config) (*llm.LLMClientRegistry, error) {
+	clients := make(map[llm.LLMFamily]map[string]llm.LLMClient)
+
+	// Initialize Anthropic (Bedrock) clients if configured
+	if cfg.AWSRegion != "" && cfg.ClaudeModelID != "" {
+		claudeClient, err := bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Bedrock client: %w", err)
+		}
+
+		clients[llm.FamilyAnthropic] = map[string]llm.LLMClient{
+			cfg.ClaudeModelID: claudeClient,
+		}
 	}
+
+	// Initialize OpenAI clients if configured
+	if cfg.OpenAIKey != "" && cfg.OpenAIModelID != "" {
+		openaiClient, err := gpt.NewClient(cfg.OpenAIKey, cfg.OpenAIModelID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OpenAI client: %w", err)
+		}
+
+		clients[llm.FamilyOpenAI] = map[string]llm.LLMClient{
+			cfg.OpenAIModelID: openaiClient,
+		}
+	}
+
+	if len(clients) == 0 {
+		return nil, fmt.Errorf("no LLM clients configured - check AWS_REGION/CLAUDE_MODEL_ID or OPEN_AI_KEY/OPEN_AI_MODEL_ID")
+	}
+
+	return llm.NewLLMClientRegistry(clients), nil
 }

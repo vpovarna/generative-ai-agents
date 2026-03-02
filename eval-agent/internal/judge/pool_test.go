@@ -4,28 +4,38 @@ import (
 	"testing"
 
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/rs/zerolog"
 )
 
+func createTestRegistry() *llm.LLMClientRegistry {
+	mockClient := &MockLLMClient{}
+	return llm.NewLLMClientRegistry(map[llm.LLMFamily]map[string]llm.LLMClient{
+		llm.FamilyAnthropic: {
+			"test-model": mockClient,
+		},
+	})
+}
+
 func TestNewJudgePool(t *testing.T) {
 	logger := zerolog.Nop()
-	mockClient := &MockLLMClient{}
+	registry := createTestRegistry()
 
-	pool := NewJudgePool(mockClient, &logger)
+	pool := NewJudgePool(registry, &logger)
 
 	if pool == nil {
 		t.Fatal("Expected pool to be created")
 	}
-	if pool.llmClient == nil {
-		t.Error("Expected llmClient to be set")
+	if pool.registry == nil {
+		t.Error("Expected registry to be set")
 	}
 }
 
 func TestJudgePool_BuildFromConfig_Success(t *testing.T) {
 	logger := zerolog.Nop()
-	mockClient := &MockLLMClient{}
+	registry := createTestRegistry()
 
-	pool := NewJudgePool(mockClient, &logger)
+	pool := NewJudgePool(registry, &logger)
 
 	cfg := &config.JudgesConfig{
 		Judges: config.Judges{
@@ -33,6 +43,8 @@ func TestJudgePool_BuildFromConfig_Success(t *testing.T) {
 				MaxTokens:   256,
 				Temperature: 0.0,
 				Retry:       true,
+				ModelFamily: "anthropic",
+				ModelID:     "test-model",
 			},
 			Evaluators: []config.JudgeConfiguration{
 				{
@@ -40,7 +52,9 @@ func TestJudgePool_BuildFromConfig_Success(t *testing.T) {
 					Enabled: true,
 					Prompt:  "Score: {{.Answer}}",
 					Model: &config.ModelConfig{
-						MaxTokens: 256,
+						MaxTokens:   256,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 				{
@@ -48,7 +62,9 @@ func TestJudgePool_BuildFromConfig_Success(t *testing.T) {
 					Enabled: true,
 					Prompt:  "Score: {{.Query}}",
 					Model: &config.ModelConfig{
-						MaxTokens: 128,
+						MaxTokens:   128,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 			},
@@ -67,14 +83,16 @@ func TestJudgePool_BuildFromConfig_Success(t *testing.T) {
 
 func TestJudgePool_BuildFromConfig_SkipsDisabledJudges(t *testing.T) {
 	logger := zerolog.Nop()
-	mockClient := &MockLLMClient{}
+	registry := createTestRegistry()
 
-	pool := NewJudgePool(mockClient, &logger)
+	pool := NewJudgePool(registry, &logger)
 
 	cfg := &config.JudgesConfig{
 		Judges: config.Judges{
 			DefaultModel: config.ModelConfig{
-				MaxTokens: 256,
+				MaxTokens:   256,
+				ModelFamily: "anthropic",
+				ModelID:     "test-model",
 			},
 			Evaluators: []config.JudgeConfiguration{
 				{
@@ -82,7 +100,9 @@ func TestJudgePool_BuildFromConfig_SkipsDisabledJudges(t *testing.T) {
 					Enabled: true,
 					Prompt:  "Score: {{.Answer}}",
 					Model: &config.ModelConfig{
-						MaxTokens: 256,
+						MaxTokens:   256,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 				{
@@ -90,7 +110,9 @@ func TestJudgePool_BuildFromConfig_SkipsDisabledJudges(t *testing.T) {
 					Enabled: false, // Disabled
 					Prompt:  "Score: {{.Query}}",
 					Model: &config.ModelConfig{
-						MaxTokens: 128,
+						MaxTokens:   128,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 				{
@@ -98,7 +120,9 @@ func TestJudgePool_BuildFromConfig_SkipsDisabledJudges(t *testing.T) {
 					Enabled: true,
 					Prompt:  "Score: {{.Context}}",
 					Model: &config.ModelConfig{
-						MaxTokens: 256,
+						MaxTokens:   256,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 			},
@@ -117,9 +141,9 @@ func TestJudgePool_BuildFromConfig_SkipsDisabledJudges(t *testing.T) {
 
 func TestJudgePool_BuildFromConfig_NilConfig(t *testing.T) {
 	logger := zerolog.Nop()
-	mockClient := &MockLLMClient{}
+	registry := createTestRegistry()
 
-	pool := NewJudgePool(mockClient, &logger)
+	pool := NewJudgePool(registry, &logger)
 
 	_, err := pool.BuildFromConfig(nil)
 	if err == nil {
@@ -132,14 +156,16 @@ func TestJudgePool_BuildFromConfig_NilConfig(t *testing.T) {
 
 func TestJudgePool_BuildFromConfig_NoEnabledJudges(t *testing.T) {
 	logger := zerolog.Nop()
-	mockClient := &MockLLMClient{}
+	registry := createTestRegistry()
 
-	pool := NewJudgePool(mockClient, &logger)
+	pool := NewJudgePool(registry, &logger)
 
 	cfg := &config.JudgesConfig{
 		Judges: config.Judges{
 			DefaultModel: config.ModelConfig{
-				MaxTokens: 256,
+				MaxTokens:   256,
+				ModelFamily: "anthropic",
+				ModelID:     "test-model",
 			},
 			Evaluators: []config.JudgeConfiguration{
 				{
@@ -147,7 +173,9 @@ func TestJudgePool_BuildFromConfig_NoEnabledJudges(t *testing.T) {
 					Enabled: false,
 					Prompt:  "Score: {{.Answer}}",
 					Model: &config.ModelConfig{
-						MaxTokens: 256,
+						MaxTokens:   256,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 			},
@@ -167,14 +195,16 @@ func TestJudgePool_BuildFromConfig_NoEnabledJudges(t *testing.T) {
 
 func TestJudgePool_BuildFromConfig_InvalidJudge(t *testing.T) {
 	logger := zerolog.Nop()
-	mockClient := &MockLLMClient{}
+	registry := createTestRegistry()
 
-	pool := NewJudgePool(mockClient, &logger)
+	pool := NewJudgePool(registry, &logger)
 
 	cfg := &config.JudgesConfig{
 		Judges: config.Judges{
 			DefaultModel: config.ModelConfig{
-				MaxTokens: 256,
+				MaxTokens:   256,
+				ModelFamily: "anthropic",
+				ModelID:     "test-model",
 			},
 			Evaluators: []config.JudgeConfiguration{
 				{
@@ -182,7 +212,9 @@ func TestJudgePool_BuildFromConfig_InvalidJudge(t *testing.T) {
 					Enabled: true,
 					Prompt:  "{{.Invalid", // Invalid template
 					Model: &config.ModelConfig{
-						MaxTokens: 256,
+						MaxTokens:   256,
+						ModelFamily: "anthropic",
+						ModelID:     "test-model",
 					},
 				},
 			},

@@ -18,7 +18,7 @@ claude mcp add --transport stdio --scope project eval-agent \
   --env AWS_REGION=us-east-1 \
   --env AWS_ACCESS_KEY_ID=your-key \
   --env AWS_SECRET_ACCESS_KEY=your-secret \
-  --env CLAUDE_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0 \
+  --env DEFAULT_MODEL_ID=us.anthropic.claude-3-5-haiku-20241022-v1:0 \
   -- /path/to/eval-agent/bin/eval-mcp
 ```
 
@@ -340,9 +340,9 @@ claude mcp add --transport stdio --scope project eval-agent \
   --env AWS_REGION=us-east-1 \
   --env AWS_ACCESS_KEY_ID=key \
   --env AWS_SECRET_ACCESS_KEY=secret \
-  --env CLAUDE_MODEL_ID=model \
+  --env DEFAULT_MODEL_ID=model \
   -- docker run -i --rm \
-    -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e CLAUDE_MODEL_ID \
+    -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e DEFAULT_MODEL_ID \
     eval-agent-mcp:latest
 ```
 

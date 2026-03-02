@@ -31,6 +31,8 @@ type JudgeConfiguration struct {
 
 // ModelConfig defines LLM model parameters
 type ModelConfig struct {
+	ModelID     string  `yaml:"modelID,omitempty"`
+	ModelFamily string  `yaml:"modelFamily,omitempty"`
 	MaxTokens   int     `yaml:"max_tokens,omitempty"`
 	Temperature float64 `yaml:"temperature,omitempty"`
 	Retry       bool    `yaml:"retry,omitempty"`
@@ -70,6 +72,15 @@ func applyDefaults(cfg *JudgesConfig) {
 		cfg.Judges.DefaultModel.Temperature = 0.0
 	}
 
+	// Set the default model family
+	if cfg.Judges.DefaultModel.ModelFamily == "" {
+		cfg.Judges.DefaultModel.ModelFamily = os.Getenv("DEFAULT_MODEL_FAMILY")
+	}
+
+	if cfg.Judges.DefaultModel.ModelID == "" {
+		cfg.Judges.DefaultModel.ModelID = os.Getenv("DEFAULT_MODEL_ID")
+	}
+
 	// For each judge, apply defaults
 	for i := range cfg.Judges.Evaluators {
 		judge := &cfg.Judges.Evaluators[i]
@@ -79,6 +90,8 @@ func applyDefaults(cfg *JudgesConfig) {
 				MaxTokens:   cfg.Judges.DefaultModel.MaxTokens,
 				Temperature: cfg.Judges.DefaultModel.Temperature,
 				Retry:       cfg.Judges.DefaultModel.Retry,
+				ModelID:     cfg.Judges.DefaultModel.ModelID,
+				ModelFamily: cfg.Judges.DefaultModel.ModelFamily,
 			}
 		} else {
 			if judge.Model.MaxTokens == 0 {
@@ -86,6 +99,12 @@ func applyDefaults(cfg *JudgesConfig) {
 			}
 			if judge.Model.Temperature == 0.0 {
 				judge.Model.Temperature = cfg.Judges.DefaultModel.Temperature
+			}
+			if judge.Model.ModelID == "" {
+				judge.Model.ModelID = cfg.Judges.DefaultModel.ModelID
+			}
+			if judge.Model.ModelFamily == "" {
+				judge.Model.ModelFamily = cfg.Judges.DefaultModel.ModelFamily
 			}
 		}
 	}

@@ -10,15 +10,15 @@ import (
 
 // JudgePool builds and manages a collection of judges from configuration
 type JudgePool struct {
-	llmClient llm.LLMClient
-	logger    *zerolog.Logger
+	registry *llm.LLMClientRegistry
+	logger   *zerolog.Logger
 }
 
 // NewJudgePool creates a new judge pool builder
-func NewJudgePool(llmClient llm.LLMClient, logger *zerolog.Logger) *JudgePool {
+func NewJudgePool(registry *llm.LLMClientRegistry, logger *zerolog.Logger) *JudgePool {
 	return &JudgePool{
-		llmClient: llmClient,
-		logger:    logger,
+		registry: registry,
+		logger:   logger,
 	}
 }
 
@@ -38,8 +38,16 @@ func (p *JudgePool) BuildFromConfig(cfg *config.JudgesConfig) ([]Judge, error) {
 			continue
 		}
 
+		// Get LLM client from registry based on judge's model family
+		family := llm.LLMFamily(judgeCfg.Model.ModelFamily)
+		llmClient, err := p.registry.Get(family, judgeCfg.Model.ModelID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get LLM client for judge %s (family=%s, model=%s): %w",
+				judgeCfg.Name, judgeCfg.Model.ModelFamily, judgeCfg.Model.ModelID, err)
+		}
+
 		// Create LLM judge
-		judge, err := NewLLMJudge(judgeCfg, p.llmClient, p.logger)
+		judge, err := NewLLMJudge(judgeCfg, llmClient, p.logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create judge %s: %w", judgeCfg.Name, err)
 		}
@@ -48,6 +56,8 @@ func (p *JudgePool) BuildFromConfig(cfg *config.JudgesConfig) ([]Judge, error) {
 
 		p.logger.Info().
 			Str("judge", judgeCfg.Name).
+			Str("model_family", judgeCfg.Model.ModelFamily).
+			Str("model_id", judgeCfg.Model.ModelID).
 			Int("max_tokens", judgeCfg.Model.MaxTokens).
 			Float64("temperature", judgeCfg.Model.Temperature).
 			Bool("retry", judgeCfg.Model.Retry).
