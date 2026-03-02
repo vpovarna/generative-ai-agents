@@ -74,11 +74,12 @@ func (p *Processor) worker(ctx context.Context, workerID int, jobs <-chan InputR
 		}
 
 		evalCtx := models.EvaluationContext{
-			RequestID: record.Request.EventID,
-			Query:     record.Request.Interaction.UserQuery,
-			Context:   record.Request.Interaction.Context,
-			Answer:    record.Request.Interaction.Answer,
-			CreatedAt: time.Now(),
+			RequestID:      record.Request.EventID,
+			Query:          record.Request.Interaction.UserQuery,
+			Context:        record.Request.Interaction.Context,
+			Answer:         record.Request.Interaction.Answer,
+			ExpectedOutput: record.Request.Interaction.ExpectedOutput,
+			CreatedAt:      time.Now(),
 		}
 
 		result := p.executor.Execute(ctx, evalCtx)

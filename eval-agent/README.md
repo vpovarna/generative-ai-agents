@@ -6,13 +6,14 @@ Production-ready evaluation service for AI agent responses. Two-stage pipeline c
 
 ## Purpose
 
-Automatically evaluates AI agent responses with **confidence scores** (0.0–1.0) and **actionable verdicts** (`pass`, `review`, `fail`) by analyzing five quality dimensions:
+Automatically evaluates AI agent responses with **confidence scores** (0.0–1.0) and **actionable verdicts** (`pass`, `review`, `fail`) by analyzing quality dimensions:
 
 - **Relevance** - Does the answer address the query?
 - **Faithfulness** - Is it grounded in provided context? (no hallucinations)
 - **Coherence** - Is the logic internally consistent?
 - **Completeness** - Are all parts of the query addressed?
 - **Instruction Following** - Does it follow format/count/style requirements?
+- **Correctness** *(optional)* - Does it match the expected output/ground truth?
 
 **What makes it different**: Only open-source LLM-as-Judge system with built-in Kendall's correlation validation. Deploy judges with statistical proof they match human judgment (τ ≥ 0.3).
 
@@ -76,13 +77,14 @@ User Query + Context + Answer
 
 **Multi-Provider Support** - Each judge can use a different LLM provider. Mix AWS Bedrock Claude and OpenAI GPT models in the same evaluation pipeline. Configure per-judge in YAML.
 
-| Judge | Evaluates | Scoring Rubric |
-|-------|-----------|----------------|
-| **relevance** | Does answer address the query? | 1.0 (highly relevant) → 0.0 (unrelated) |
-| **faithfulness** | Grounded in context? (no hallucinations) | 1.0 (all grounded) → 0.0 (mostly hallucinated) |
-| **coherence** | Internally consistent logic? | 1.0 (fully coherent) → 0.0 (contradictory) |
-| **completeness** | Fully addresses all parts of query? | 1.0 (all addressed), 0.5 (some missing), 0.0 (major parts ignored) |
-| **instruction** | Follows explicit instructions? (format, count, style) | 1.0 (all followed), 0.7-0.9 (most), 0.4-0.6 (some), 0.0-0.3 (mostly ignored) |
+| Judge | Evaluates | Scoring Rubric | Requires |
+|-------|-----------|----------------|----------|
+| **relevance** | Does answer address the query? | 1.0 (highly relevant) → 0.0 (unrelated) | Query, Answer |
+| **faithfulness** | Grounded in context? (no hallucinations) | 1.0 (all grounded) → 0.0 (mostly hallucinated) | Context, Answer |
+| **coherence** | Internally consistent logic? | 1.0 (fully coherent) → 0.0 (contradictory) | Answer |
+| **completeness** | Fully addresses all parts of query? | 1.0 (all addressed), 0.5 (some missing), 0.0 (major parts ignored) | Query, Answer |
+| **instruction** | Follows explicit instructions? (format, count, style) | 1.0 (all followed), 0.7-0.9 (most), 0.4-0.6 (some), 0.0-0.3 (mostly ignored) | Query, Answer |
+| **correctness** *(disabled by default)* | Semantic match with expected output? | 1.0 (identical), 0.8-0.9 (mostly correct), 0.5-0.7 (partial), 0.2-0.4 (somewhat related), 0.0-0.1 (different) | Answer, ExpectedOutput |
 
 Each judge returns `score` (0.0–1.0) + `reason` string.
 
@@ -298,7 +300,7 @@ Runs both stages (prechecks + all LLM judges) and returns aggregated result.
 
 **POST** `/api/v1/evaluate/judge/{judge_name}?threshold=0.7`
 
-Evaluates with only one judge. Available judges: `relevance`, `faithfulness`, `coherence`, `completeness`, `instruction`
+Evaluates with only one judge. Available judges: `relevance`, `faithfulness`, `coherence`, `completeness`, `instruction`, `correctness` (if enabled)
 
 **Query params:**
 - `threshold` (optional): Pass/fail threshold (0.0-1.0, default: 0.7)
@@ -365,6 +367,7 @@ judges:
 - `temperature`: Model temperature (0.0 for deterministic)
 - `retry`: Enable automatic retry with exponential backoff
 - `requires_context`: Whether judge needs retrieved context (for RAG evaluation)
+- `requires_expected_output`: Whether judge needs ground truth for comparison (for correctness evaluation)
 
 **Multi-Provider Support:**
 
@@ -388,6 +391,204 @@ Each judge can use a different model family and model ID. The system maintains a
 2. Run validation: -validate -input annotated_sample.jsonl
 3. Check Kendall's τ ≥ 0.3
 4. Deploy updated configuration
+```
+
+---
+
+## Correctness Evaluation (Ground Truth Comparison)
+
+The **correctness judge** evaluates semantic similarity between an agent's answer and expected output (ground truth). Unlike other judges that assess quality dimensions, correctness directly compares against a reference answer.
+
+### When to Use
+
+**Ideal for:**
+- Regression testing: Ensure agent outputs haven't degraded across releases
+- Benchmark evaluation: Compare against standardized test suites with known answers
+- Fine-tuning validation: Verify model improvements against golden datasets
+- A/B testing: Compare different agent versions on the same questions
+
+**Not suitable for:**
+- Open-ended questions without canonical answers
+- Creative or subjective responses
+- Real-time production monitoring (most requests don't have expected outputs)
+
+### Configuration
+
+The correctness judge is **disabled by default** in `configs/judges.yaml`. Enable it by setting `enabled: true`:
+
+```yaml
+judges:
+  evaluators:
+    # ... other judges ...
+
+    - name: correctness
+      enabled: true  # Set to true to enable
+      description: "Evaluates semantic similarity between answer and expected output"
+      requires_context: false
+      requires_expected_output: true  # Auto-skips if expected_output missing
+      prompt: |
+        You are a correctness evaluation judge.
+        Compare the provided answer with the expected output (ground truth).
+        Score based on semantic equivalence, not exact string match.
+
+        Answer: {{.Answer}}
+        Expected Output: {{.ExpectedOutput}}
+
+        Scoring guidelines:
+        - 1.0: Semantically identical
+        - 0.8-0.9: Mostly correct, minor differences
+        - 0.5-0.7: Partially correct
+        - 0.2-0.4: Somewhat related but different
+        - 0.0-0.1: Completely different
+
+        {"score": <float>, "reason": "<string>"}
+      model:
+        max_tokens: 200
+        temperature: 0.0
+        retry: true
+```
+
+### Skip Logic (Backwards Compatible)
+
+The correctness judge **automatically skips** when `expected_output` is not provided in the request. This means:
+
+- ✅ Existing evaluations without `expected_output` continue working unchanged
+- ✅ No breaking changes to API contracts
+- ✅ Judge runs only when ground truth is available
+- ✅ No errors or warnings when field is missing
+
+**Example behavior:**
+```json
+// Request WITHOUT expected_output - correctness judge skipped
+{
+  "event_id": "test-1",
+  "interaction": {
+    "user_query": "What is 2+2?",
+    "answer": "4"
+    // No expected_output field
+  }
+}
+// Result: All judges except correctness run
+
+// Request WITH expected_output - correctness judge runs
+{
+  "event_id": "test-2",
+  "interaction": {
+    "user_query": "What is 2+2?",
+    "answer": "4",
+    "expected_output": "Four"  // Provided
+  }
+}
+// Result: All judges including correctness run
+```
+
+### API Usage
+
+**Full pipeline with expected output:**
+```bash
+curl -X POST http://localhost:18082/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-1",
+    "event_type": "agent_response",
+    "agent": {"name": "my-agent", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is the capital of France?",
+      "answer": "Paris is the capital of France.",
+      "expected_output": "Paris"
+    }
+  }'
+```
+
+**Single correctness judge only:**
+```bash
+curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold=0.8" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "test-correctness-2",
+    "event_type": "agent_response",
+    "agent": {"name": "my-agent", "version": "1.0"},
+    "interaction": {
+      "user_query": "What is 2+2?",
+      "answer": "The answer is 4",
+      "expected_output": "4"
+    }
+  }'
+```
+
+### Batch Evaluation with Ground Truth
+
+Prepare a JSONL file with expected outputs:
+
+```jsonl
+{"event_id": "test-1", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "Capital of France?", "answer": "Paris", "expected_output": "Paris"}}
+{"event_id": "test-2", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "2+2?", "answer": "4", "expected_output": "Four"}}
+{"event_id": "test-3", "event_type": "agent_response", "agent": {"name": "agent"}, "interaction": {"user_query": "What is Go?", "answer": "Programming language", "expected_output": "A programming language created by Google"}}
+```
+
+Run batch evaluation:
+```bash
+go run cmd/batch/main.go \
+  -input test_data_with_ground_truth.jsonl \
+  -output results.jsonl \
+  -workers 5
+```
+
+### MCP Integration
+
+When using the MCP server with Claude Code/Desktop/Cursor, provide the `expected_output` field:
+
+```typescript
+// evaluate_response tool
+{
+  "event_id": "mcp-test-1",
+  "user_query": "What is the capital of France?",
+  "answer": "Paris",
+  "expected_output": "Paris"  // Optional - correctness judge runs if provided
+}
+
+// evaluate_single_judge tool (correctness only)
+{
+  "event_id": "mcp-test-2",
+  "user_query": "What is 2+2?",
+  "answer": "Four",
+  "judge_name": "correctness",
+  "threshold": 0.8,
+  "expected_output": "4"  // Required for correctness judge
+}
+```
+
+### Use Cases
+
+**Regression Testing:**
+```bash
+# Golden dataset with expected outputs
+go run cmd/batch/main.go -input golden_test_suite.jsonl -output regression_results.jsonl
+
+# Check if average confidence dropped
+jq -s '[.[].confidence] | add/length' regression_results.jsonl
+```
+
+**Benchmark Evaluation:**
+```bash
+# Evaluate against standard benchmark (e.g., TruthfulQA, MMLU-style)
+go run cmd/batch/main.go -input benchmark_with_answers.jsonl -output benchmark_scores.jsonl
+
+# Extract correctness scores only
+jq '.stages[] | select(.name == "correctness") | {event_id: .id, score: .score}' benchmark_scores.jsonl
+```
+
+**A/B Testing:**
+```bash
+# Test agent v1.0
+go run cmd/batch/main.go -input test_suite.jsonl -output agent_v1_results.jsonl
+
+# Test agent v2.0
+go run cmd/batch/main.go -input test_suite.jsonl -output agent_v2_results.jsonl
+
+# Compare correctness scores
+jq -s 'map(.stages[] | select(.name == "correctness") | .score) | add/length' agent_v1_results.jsonl
+jq -s 'map(.stages[] | select(.name == "correctness") | .score) | add/length' agent_v2_results.jsonl
 ```
 
 ---

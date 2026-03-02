@@ -22,12 +22,24 @@ func NewJudgeRunner(judges []Judge, logger *zerolog.Logger) *JudgeRunner {
 }
 
 func (c *JudgeRunner) Run(ctx context.Context, evaluationContext models.EvaluationContext) []models.StageResult {
-	results := make(chan models.StageResult, len(c.Judges))
+	activeJudges := 0
+	for _, judge := range c.Judges {
+		if judge.RequiresExpectedOutput() && evaluationContext.ExpectedOutput == "" {
+			continue
+		}
+		activeJudges++
+	}
+
+	results := make(chan models.StageResult, activeJudges)
 	var wg sync.WaitGroup
 
 	judgeTimeout := 15 * time.Second
 
 	for _, judge := range c.Judges {
+		if judge.RequiresExpectedOutput() && evaluationContext.ExpectedOutput == "" {
+			continue
+		}
+
 		wg.Add(1)
 		go func(j Judge) {
 			defer wg.Done()

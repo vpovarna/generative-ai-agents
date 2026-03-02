@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
@@ -21,12 +22,13 @@ type Judges struct {
 
 // JudgeConfiguration defines a single judge configuration
 type JudgeConfiguration struct {
-	Name            string       `yaml:"name"`
-	Enabled         bool         `yaml:"enabled"`
-	Description     string       `yaml:"description"`
-	RequiresContext bool         `yaml:"requires_context"`
-	Prompt          string       `yaml:"prompt"`
-	Model           *ModelConfig `yaml:"model,omitempty"` // Optional override
+	Name                   string       `yaml:"name"`
+	Enabled                bool         `yaml:"enabled"`
+	Description            string       `yaml:"description"`
+	RequiresContext        bool         `yaml:"requires_context"`
+	RequiresExpectedOutput bool         `yaml:"requires_expected_output"` // For correctness evaluation
+	Prompt                 string       `yaml:"prompt"`
+	Model                  *ModelConfig `yaml:"model,omitempty"` // Optional override
 }
 
 // ModelConfig defines LLM model parameters
@@ -133,6 +135,15 @@ func (cfg *JudgesConfig) Validate() error {
 
 		if _, err := template.New(judge.Name).Parse(judge.Prompt); err != nil {
 			return fmt.Errorf("judge %s has invalid prompt template: %w", judge.Name, err)
+		}
+
+		// Validate that required fields are referenced in the prompt
+		if judge.RequiresContext && !strings.Contains(judge.Prompt, "{{.Context}}") {
+			return fmt.Errorf("judge %s requires context but prompt does not reference {{.Context}}", judge.Name)
+		}
+
+		if judge.RequiresExpectedOutput && !strings.Contains(judge.Prompt, "{{.ExpectedOutput}}") {
+			return fmt.Errorf("judge %s requires expected_output but prompt does not reference {{.ExpectedOutput}}", judge.Name)
 		}
 
 		if judge.Model != nil {

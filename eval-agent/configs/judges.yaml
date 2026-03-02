@@ -132,3 +132,32 @@ judges:
         max_tokens: 300
         temperature: 0.0
         retry: true
+
+    # Correctness Judge: Evaluates semantic match with expected output (ground truth)
+    - name: correctness
+      enabled: false
+      description: "Evaluates semantic similarity between answer and expected output"
+      requires_context: false
+      requires_expected_output: true
+      prompt: |
+        You are a correctness evaluation judge.
+
+        Compare the provided answer with the expected output (ground truth).
+        Score based on semantic equivalence, not exact string match.
+
+        Answer: {{.Answer}}
+        Expected Output: {{.ExpectedOutput}}
+
+        Scoring guidelines:
+        - 1.0: Semantically identical
+        - 0.8-0.9: Mostly correct, minor differences
+        - 0.5-0.7: Partially correct
+        - 0.2-0.4: Somewhat related but different
+        - 0.0-0.1: Completely different
+
+        Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+        {"score": <float>, "reason": "<string>"}
+      model:
+        max_tokens: 200
+        temperature: 0.0
+        retry: true

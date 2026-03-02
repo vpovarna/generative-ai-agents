@@ -438,6 +438,112 @@ func TestApplyDefaults_MergesPartialOverrides(t *testing.T) {
 	}
 }
 
+func TestValidate_RequiresContextWithoutContextPlaceholder(t *testing.T) {
+	cfg := &JudgesConfig{
+		Judges: Judges{
+			Evaluators: []JudgeConfiguration{
+				{
+					Name:            "faithfulness",
+					Prompt:          "Score this answer: {{.Answer}}", // Missing {{.Context}}
+					RequiresContext: true,
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Error("Expected validation error for judge requiring context without {{.Context}} in prompt")
+	}
+
+	if !contains(err.Error(), "requires context") || !contains(err.Error(), "{{.Context}}") {
+		t.Errorf("Expected error about missing {{.Context}}, got: %v", err)
+	}
+}
+
+func TestValidate_RequiresContextWithContextPlaceholder(t *testing.T) {
+	cfg := &JudgesConfig{
+		Judges: Judges{
+			Evaluators: []JudgeConfiguration{
+				{
+					Name:            "faithfulness",
+					Prompt:          "Context: {{.Context}}\nAnswer: {{.Answer}}", // Has {{.Context}}
+					RequiresContext: true,
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err != nil {
+		t.Errorf("Expected validation to pass for judge with {{.Context}}, got: %v", err)
+	}
+}
+
+func TestValidate_RequiresExpectedOutputWithoutPlaceholder(t *testing.T) {
+	cfg := &JudgesConfig{
+		Judges: Judges{
+			Evaluators: []JudgeConfiguration{
+				{
+					Name:                   "correctness",
+					Prompt:                 "Answer: {{.Answer}}\nScore it.", // Missing {{.ExpectedOutput}}
+					RequiresExpectedOutput: true,
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Error("Expected validation error for judge requiring expected_output without {{.ExpectedOutput}} in prompt")
+	}
+
+	if !contains(err.Error(), "requires expected_output") || !contains(err.Error(), "{{.ExpectedOutput}}") {
+		t.Errorf("Expected error about missing {{.ExpectedOutput}}, got: %v", err)
+	}
+}
+
+func TestValidate_RequiresExpectedOutputWithPlaceholder(t *testing.T) {
+	cfg := &JudgesConfig{
+		Judges: Judges{
+			Evaluators: []JudgeConfiguration{
+				{
+					Name:                   "correctness",
+					Prompt:                 "Answer: {{.Answer}}\nExpected: {{.ExpectedOutput}}", // Has {{.ExpectedOutput}}
+					RequiresExpectedOutput: true,
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err != nil {
+		t.Errorf("Expected validation to pass for judge with {{.ExpectedOutput}}, got: %v", err)
+	}
+}
+
+func TestValidate_RequiresBothContextAndExpectedOutput(t *testing.T) {
+	cfg := &JudgesConfig{
+		Judges: Judges{
+			Evaluators: []JudgeConfiguration{
+				{
+					Name: "complex",
+					Prompt: `Context: {{.Context}}
+Answer: {{.Answer}}
+Expected: {{.ExpectedOutput}}`,
+					RequiresContext:        true,
+					RequiresExpectedOutput: true,
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err != nil {
+		t.Errorf("Expected validation to pass for judge with both {{.Context}} and {{.ExpectedOutput}}, got: %v", err)
+	}
+}
+
 // Helper function
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))

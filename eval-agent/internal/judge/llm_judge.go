@@ -17,12 +17,13 @@ import (
 
 // LLMJudge is a generic judge implementation that uses LLM with configurable prompts.
 type LLMJudge struct {
-	name            string
-	promptTemplate  *template.Template
-	modelConfig     config.ModelConfig
-	requiresContext bool
-	llmClient       llm.LLMClient
-	logger          *zerolog.Logger
+	name                   string
+	promptTemplate         *template.Template
+	modelConfig            config.ModelConfig
+	requiresContext        bool
+	requiresExpectedOutput bool
+	llmClient              llm.LLMClient
+	logger                 *zerolog.Logger
 }
 
 func NewLLMJudge(
@@ -40,12 +41,13 @@ func NewLLMJudge(
 	}
 
 	return &LLMJudge{
-		name:            judgeCfg.Name,
-		promptTemplate:  tmpl,
-		modelConfig:     *judgeCfg.Model,
-		requiresContext: judgeCfg.RequiresContext,
-		llmClient:       llmClient,
-		logger:          logger,
+		name:                   judgeCfg.Name,
+		promptTemplate:         tmpl,
+		modelConfig:            *judgeCfg.Model,
+		requiresContext:        judgeCfg.RequiresContext,
+		requiresExpectedOutput: judgeCfg.RequiresExpectedOutput,
+		llmClient:              llmClient,
+		logger:                 logger,
 	}, nil
 }
 
@@ -157,6 +159,11 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 // Name returns the judge's name
 func (j *LLMJudge) Name() string {
 	return j.name
+}
+
+// RequiresExpectedOutput returns true if this judge needs expected_output
+func (j *LLMJudge) RequiresExpectedOutput() bool {
+	return j.requiresExpectedOutput
 }
 
 // buildPrompt executes the template with the evaluation context
