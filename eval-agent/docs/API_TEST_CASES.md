@@ -45,30 +45,9 @@ INFO judge created successfully judge=instruction model_family=anthropic model_i
 INFO judge pool built successfully total_judges=5
 ```
 
-## Health Check Tests
-
-### Test Case 1: Health Endpoint
-
-**Request:**
-```bash
-curl http://localhost:18082/api/v1/health
-```
-
-**Expected Response:**
-```json
-{
-  "status": "ok",
-  "version": "1.0.0"
-}
-```
-
-**Status Code:** 200
-
----
-
 ## Full Pipeline Evaluation Tests
 
-### Test Case 2: Happy Path - High Quality Answer
+### Test Case 1: Happy Path - High Quality Answer
 
 **Request:**
 ```bash
@@ -87,24 +66,6 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 ```
 
 **Expected Response (truncated, full response has 8 stages):**
-```json
-{
-  "id": "test-001",
-  "stages": [
-    {"name": "length-checker", "score": 1.0, "reason": "Answer Length is acceptable", "duration_ns": 15000},
-    {"name": "overlap-checker", "score": 0.85, "reason": "Good keyword overlap", "duration_ns": 12000},
-    {"name": "format-checker", "score": 1.0, "reason": "Valid Answer", "duration_ns": 10000},
-    {"name": "relevance-judge", "score": 0.95, "reason": "Answer directly addresses the query", "duration_ns": 1850000000},
-    {"name": "faithfulness-judge", "score": 1.0, "reason": "Grounded in context", "duration_ns": 1820000000},
-    {"name": "coherence-judge", "score": 1.0, "duration_ns": 1780000000},
-    {"name": "completeness-judge", "score": 1.0, "duration_ns": 1750000000},
-    {"name": "instruction-judge", "score": 1.0, "duration_ns": 1690000000}
-  ],
-  "confidence": 0.92,
-  "verdict": "pass"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - `confidence` > 0.8
@@ -113,7 +74,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - All scores high (answer is correct, relevant, and grounded)
 - Response time: ~3-4 seconds (judges run in parallel)
 
-### Test Case 3: Early Exit - Very Short Answer
+### Test Case 2: Early Exit - Very Short Answer
 
 **Request:**
 ```bash
@@ -131,20 +92,6 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
   }'
 ```
 
-**Expected Response:**
-```json
-{
-  "id": "test-002",
-  "stages": [
-    {"name": "length-checker", "score": 0.0, "reason": "Answer too short", "duration_ns": 12000},
-    {"name": "overlap-checker", "score": 0.0, "reason": "...", "duration_ns": 10000},
-    {"name": "format-checker", "score": 0.5, "reason": "...", "duration_ns": 8000}
-  ],
-  "confidence": 0.15,
-  "verdict": "fail"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - `confidence` < 0.2
@@ -152,7 +99,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - Only 3 stages (prechecks only, early exit triggered)
 - No LLM judges called (cost savings)
 
-### Test Case 4: Fail Verdict - Irrelevant Answer
+### Test Case 3: Fail Verdict - Irrelevant Answer
 
 **Request:**
 ```bash
@@ -170,25 +117,6 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
   }'
 ```
 
-**Expected Response:**
-```json
-{
-  "id": "test-003",
-  "stages": [
-    {"name": "length-checker", "score": 1.0, "duration_ns": 15000},
-    {"name": "overlap-checker", "score": 0.5, "duration_ns": 12000},
-    {"name": "format-checker", "score": 1.0, "duration_ns": 10000},
-    {"name": "relevance-judge", "score": 0.2, "duration_ns": 2388000000},
-    {"name": "faithfulness-judge", "score": 0.2, "duration_ns": 2372000000},
-    {"name": "coherence-judge", "score": 0.3, "duration_ns": 2994000000},
-    {"name": "completeness-judge", "score": 0.0, "duration_ns": 2081000000},
-    {"name": "instruction-judge", "score": 0.4, "duration_ns": 1806000000}
-  ],
-  "confidence": 0.354,
-  "verdict": "fail"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - `confidence` ~0.35
@@ -202,7 +130,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
   - **instruction: 0.4** - No specific instructions violated
 - Total duration: ~3 seconds (5 parallel LLM calls)
 
-### Test Case 5: Hallucination Detection
+### Test Case 4: Hallucination Detection
 
 **Request:**
 ```bash
@@ -218,50 +146,6 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
       "answer": "Tokyo has a population of 50 million people and is the largest city in China."
     }
   }'
-```
-
-**Expected Response:**
-```json
-{
-  "id": "test-004",
-  "stages": [
-    {"name": "format-checker", "score": 1.0, "duration_ns": 8292},
-    {"name": "length-checker", "score": 1.0, "duration_ns": 83},
-    {"name": "overlap-checker", "score": 0.67, "duration_ns": 7833},
-    {
-      "name": "faithfulness-judge",
-      "score": 0.1,
-      "reason": "Answer contains multiple factual errors not present in the original context: incorrectly states population, incorrectly identifies country, and introduces unsupported claims about city size",
-      "duration_ns": 2142318792
-    },
-    {
-      "name": "coherence-judge",
-      "score": 0.2,
-      "reason": "Multiple logical inconsistencies: Tokyo is in Japan, not China; population figure is inaccurate; statements contradict known geographic and demographic facts",
-      "duration_ns": 1780915375
-    },
-    {
-      "name": "relevance-judge",
-      "score": 0.2,
-      "reason": "The answer contains a factual error about Tokyo's population and location. While it mentions a population number, the details are incorrect. Tokyo is in Japan, not China...",
-      "duration_ns": 2326646583
-    },
-    {
-      "name": "completeness-judge",
-      "score": 0.0,
-      "reason": "Incorrect population figure, incorrect country, factually inaccurate answer",
-      "duration_ns": 1474770625
-    },
-    {
-      "name": "instruction-judge",
-      "score": 0.4,
-      "reason": "Factual information is incorrect (Tokyo is in Japan, not China) and population figure is inaccurate...",
-      "duration_ns": 2206704875
-    }
-  ],
-  "confidence": 0.393,
-  "verdict": "fail"
-}
 ```
 
 **Expected:**
@@ -285,7 +169,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 ## Single Judge Evaluation Tests
 
-### Test Case 6: Relevance Judge
+### Test Case 5: Relevance Judge
 
 **Request:**
 ```bash
@@ -303,24 +187,12 @@ curl -X POST http://localhost:18082/api/v1/evaluate/judge/relevance \
   }'
 ```
 
-**Expected Response:**
-```json
-{
-  "id": "test-005",
-  "stages": [
-    {"name": "relevance-judge", "score": 0.95, "reason": "Answer directly addresses the query", "duration_ns": 850000000}
-  ],
-  "confidence": 0.95,
-  "verdict": "pass"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - Only 1 stage (relevance-judge)
 - Score close to 1.0 for relevant answer
 
-### Test Case 7: Custom Threshold
+### Test Case 6: Custom Threshold
 
 **Request:**
 ```bash
@@ -343,7 +215,7 @@ curl -X POST "http://localhost:18082/api/v1/evaluate/judge/faithfulness?threshol
 - High faithfulness score (grounded in context)
 - `verdict` = "pass" (score > 0.9 threshold)
 
-### Test Case 8: Invalid Judge Name
+### Test Case 7: Invalid Judge Name
 
 **Request:**
 ```bash
@@ -369,7 +241,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate/judge/invalid-judge \
 
 ## Error Handling Tests
 
-### Test Case 9: Missing Required Fields
+### Test Case 8: Missing Required Fields
 
 **Request:**
 ```bash
@@ -382,52 +254,11 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
     }
   }'
 ```
-
-**Expected Response:**
-- Status Code: 400
-- Error message about missing required fields
-
-### Test Case 10: Invalid JSON
-
-**Request:**
-```bash
-curl -X POST http://localhost:18082/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{invalid json}'
-```
-
-**Expected Response:**
-- Status Code: 400
-- Error message: "Failed to parse request body" or similar
-
-### Test Case 11: Empty Answer
-
-**Request:**
-```bash
-curl -X POST http://localhost:18082/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_id": "test-009",
-    "event_type": "agent_response",
-    "agent": {"name": "test", "type": "rag", "version": "1.0"},
-    "interaction": {
-      "user_query": "What is AI?",
-      "context": "AI is artificial intelligence.",
-      "answer": ""
-    }
-  }'
-```
-
-**Expected Response:**
-- Status Code: 200
-- Very low precheck scores
-- Early exit with `verdict` = "fail"
-
 ---
 
 ## Performance Tests
 
-### Test Case 12: Concurrent Requests
+### Test Case 9: Concurrent Requests
 
 **Script:**
 ```bash
@@ -445,7 +276,7 @@ wait
 - Response times < 5 seconds per request
 - No race conditions or errors
 
-### Test Case 13: Large Context (10KB)
+### Test Case 10: Large Context (10KB)
 
 **Request:**
 ```bash
@@ -475,7 +306,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 ## Edge Cases
 
-### Test Case 14: Special Characters in Answer
+### Test Case 11: Special Characters in Answer
 
 **Request:**
 ```bash
@@ -498,7 +329,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - Evaluation handles newlines and special characters
 - Format checker passes
 
-### Test Case 15: Non-English Text
+### Test Case 12: Non-English Text
 
 **Request:**
 ```bash
@@ -525,7 +356,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 ## Multi-Provider Testing
 
-### Test Case 16: Mixed Provider Evaluation
+### Test Case 13: Mixed Provider Evaluation
 
 **Setup:**
 Update `configs/judges.yaml` to use different providers:
@@ -588,7 +419,7 @@ The correctness judge evaluates semantic similarity between an answer and expect
   - Wrong answers score ~0.0-0.2
   - Auto-skip works when `expected_output` is missing
 
-### Test Case 17: Enable Correctness Judge
+### Test Case 14: Enable Correctness Judge
 
 **Setup:**
 Enable the correctness judge in `configs/judges.yaml`:
@@ -628,7 +459,7 @@ judges:
 
 **Restart the API server** after enabling the judge.
 
-### Test Case 18: Single Correctness Judge - Exact Match
+### Test Case 15: Single Correctness Judge - Exact Match
 
 **Request:**
 ```bash
@@ -646,23 +477,6 @@ curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold
   }'
 ```
 
-**Expected Response:**
-```json
-{
-  "id": "test-correctness-001",
-  "stages": [
-    {
-      "name": "correctness-judge",
-      "score": 1.0,
-      "reason": "The answer and expected output are semantically identical",
-      "duration_ns": 1234567890
-    }
-  ],
-  "confidence": 1.0,
-  "verdict": "pass"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - `confidence` = 1.0 (exact match)
@@ -670,7 +484,7 @@ curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold
 - Only 1 stage (correctness judge)
 - Response time: ~1-2 seconds
 
-### Test Case 19: Single Correctness Judge - Semantic Match
+### Test Case 16: Single Correctness Judge - Semantic Match
 
 **Request:**
 ```bash
@@ -688,30 +502,13 @@ curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold
   }'
 ```
 
-**Expected Response:**
-```json
-{
-  "id": "test-correctness-002",
-  "stages": [
-    {
-      "name": "correctness-judge",
-      "score": 0.9,
-      "reason": "Semantically equivalent - both convey the same answer (four/4), just different representations",
-      "duration_ns": 1456789012
-    }
-  ],
-  "confidence": 0.9,
-  "verdict": "pass"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - `confidence` ~0.9 (semantic match despite different format)
 - `verdict` = "pass"
 - Demonstrates that judge understands "four" = "4"
 
-### Test Case 20: Single Correctness Judge - Wrong Answer
+### Test Case 17 Single Correctness Judge - Wrong Answer
 
 **Request:**
 ```bash
@@ -729,30 +526,13 @@ curl -X POST "http://localhost:18082/api/v1/evaluate/judge/correctness?threshold
   }'
 ```
 
-**Expected Response:**
-```json
-{
-  "id": "test-correctness-003",
-  "stages": [
-    {
-      "name": "correctness-judge",
-      "score": 0.1,
-      "reason": "Completely different answers - Milan is a city in Italy but not the capital. Expected Rome.",
-      "duration_ns": 1345678901
-    }
-  ],
-  "confidence": 0.1,
-  "verdict": "fail"
-}
-```
-
 **Expected:**
 - Status Code: 200
 - `confidence` ~0.1 (wrong answer)
 - `verdict` = "fail"
 - Correctly identifies that Milan ≠ Rome
 
-### Test Case 21: Full Pipeline with Correctness - All Judges Pass
+### Test Case 18: Full Pipeline with Correctness - All Judges Pass
 
 **Request:**
 ```bash
@@ -799,7 +579,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - All judges score high
 - Response time: ~3-4 seconds (judges run in parallel)
 
-### Test Case 22: Full Pipeline with Correctness - Factually Wrong but Well-Formed Answer
+### Test Case 18: Full Pipeline with Correctness - Factually Wrong but Well-Formed Answer
 
 **Request:**
 ```bash
@@ -852,7 +632,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - **Correctness judge: 0.1** - Only judge that catches Saturn ≠ Jupiter
 - Demonstrates that correctness is orthogonal to quality - you can have a well-formed, coherent answer that's factually wrong
 
-### Test Case 23: Correctness Judge Auto-Skip (No Expected Output)
+### Test Case 19: Correctness Judge Auto-Skip (No Expected Output)
 
 **Request:**
 ```bash
@@ -906,7 +686,7 @@ DEBUG all judges completed judgeCount=5
 
 ## Batch Evaluation with Correctness
 
-### Test Case 24: Batch Correctness Evaluation
+### Test Case 20: Batch Correctness Evaluation
 
 **Setup:**
 Create a test file `test_correctness_batch.jsonl`:
@@ -955,238 +735,4 @@ Each record will have 9 stages (3 prechecks + 6 judges). Example for batch-001:
 INFO Starting batch evaluation input=test_correctness_batch.jsonl output=correctness_results.jsonl workers=2
 INFO Worker pool finished
 INFO Batch evaluation complete duration=8.234s total_records=4 success=4 errors=0
-```
-
-**Verify results:**
-```bash
-# Extract only correctness scores
-jq -r '.stages[] | select(.name == "correctness-judge") | "\(.score) - \(.reason)"' correctness_results.jsonl
-
-# Output:
-# 1.0 - Exact match
-# 0.9 - Semantically equivalent
-# 0.1 - Wrong answer - Milan is not Rome
-# 0.7 - Partially correct - missing details
-```
-
-**Expected:**
-- All 4 records processed successfully
-- Correctness judge runs for all records (all have `expected_output`)
-- Scores reflect semantic similarity:
-  - 1.0 for exact match (Paris = Paris)
-  - 0.9 for semantic match (4 = Four)
-  - 0.1 for wrong answer (Milan ≠ Rome)
-  - 0.7 for partial match (missing details but correct core fact)
-
-### Use Case: Regression Testing
-
-**Scenario:** Test if your agent's performance changed after an update.
-
-```bash
-# 1. Create golden dataset with expected outputs
-cat > golden_test_suite.jsonl << 'EOF'
-{"event_id":"reg-001","event_type":"agent_response","agent":{"name":"my-agent","version":"1.0"},"interaction":{"user_query":"What is 5*6?","answer":"30","expected_output":"30"}}
-{"event_id":"reg-002","event_type":"agent_response","agent":{"name":"my-agent","version":"1.0"},"interaction":{"user_query":"Capital of Spain?","answer":"Madrid","expected_output":"Madrid"}}
-{"event_id":"reg-003","event_type":"agent_response","agent":{"name":"my-agent","version":"1.0"},"interaction":{"user_query":"Boiling point of water?","answer":"100°C","expected_output":"100 degrees Celsius"}}
-EOF
-
-# 2. Run evaluation
-go run cmd/batch/main.go -input golden_test_suite.jsonl -output regression_v1.jsonl
-
-# 3. Calculate average correctness score
-jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' regression_v1.jsonl
-# Output: 0.95  (average correctness score)
-
-# 4. After agent update, run again
-go run cmd/batch/main.go -input golden_test_suite.jsonl -output regression_v2.jsonl
-jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/length' regression_v2.jsonl
-# Output: 0.93  (slight regression detected)
-
-# 5. Compare line-by-line
-paste <(jq -r '.stages[] | select(.name == "correctness-judge") | .score' regression_v1.jsonl) \
-      <(jq -r '.stages[] | select(.name == "correctness-judge") | .score' regression_v2.jsonl) | \
-      awk '{printf "%.2f -> %.2f (%.2f change)\n", $1, $2, $2-$1}'
-# Output:
-# 1.00 -> 1.00 (0.00 change)
-# 1.00 -> 0.95 (−0.05 change)  ← identified regression
-# 0.90 -> 0.85 (−0.05 change)  ← identified regression
-```
-
-### Correctness Test Case Summary
-
-**Validation Checklist for Correctness Tests:**
-
-| Test | What It Tests | Key Validation |
-|------|---------------|----------------|
-| TC 17 | Setup | Judge enabled, server logs show 6 judges |
-| TC 18 | Exact match | Score = 1.0, verdict = pass |
-| TC 19 | Semantic match | Score ~0.9, "four" = "4" recognized |
-| TC 20 | Wrong answer | Score ~0.1, Milan ≠ Rome detected |
-| TC 21 | Full pipeline (correct) | 9 stages, all high scores, verdict = pass |
-| TC 22 | Full pipeline (wrong) | 9 stages, only correctness low, verdict = review |
-| TC 23 | Auto-skip | 8 stages (no correctness), no errors |
-| TC 24 | Batch processing | All records processed, varied scores |
-
-**Common Issues:**
-
-1. **Correctness judge not running** → Check it's enabled in `judges.yaml` and server restarted
-2. **Unexpected scores** → LLM variability is normal; validate pattern (high/medium/low) not exact value
-3. **"judge not found: correctness"** → Judge not enabled or server not restarted after config change
-4. **All judges failing (TC 22)** → Expected if answer is too obviously wrong; use more subtle errors
-
----
-
-## Debugging Tips
-
-### Check Server Logs
-
-The server provides detailed logging for troubleshooting:
-
-```bash
-# Start with verbose logging
-LOG_LEVEL=debug go run cmd/api/main.go
-```
-
-**Key log messages:**
-```
-INFO judge created successfully judge=relevance model_family=anthropic model_id=...
-INFO judge completed duration=2388.927833 judge=relevance score=0.2
-ERR failed to deserialize LLM response error="..." content="..."
-DBG all judges completed judgeCount=5
-```
-
-### Common Issues
-
-1. **"no clients registered for family: anthropic"**
-   - **Cause:** Judge references a model not in `judges.yaml`
-   - **Fix:** Add `modelFamily` and `modelID` to judge configuration
-
-2. **"failed to deserialize LLM response"**
-   - **Cause:** Model returning malformed JSON (duplicated text, extra characters)
-   - **Fix:**
-     - Reduce `max_tokens` (200 works well)
-     - Simplify prompts
-     - Enable `retry: true`
-     - Use clearer output instructions: "Output ONLY valid JSON"
-
-3. **High latency (>10s)**
-   - **Cause:** Sequential judge execution or model issues
-   - **Fix:** Judges run in parallel by default; check model performance
-
-4. **Invalid threshold errors**
-   - **Cause:** Threshold outside 0.0-1.0 range
-   - **Fix:** Use valid threshold: `?threshold=0.7`
-
-### Response Time Expectations
-
-| Scenario | Expected Duration |
-|----------|------------------|
-| Early exit (prechecks only) | < 500ms |
-| Single judge | 800ms - 2s |
-| Full pipeline (5 judges) | 2.5s - 4s |
-| Large context (10KB+) | 3s - 6s |
-
----
-
-## Summary
-
-**Total Test Cases:** 24
-
-**Categories:**
-- Health Check: 1 test
-- Full Pipeline: 4 tests
-- Single Judge: 3 tests
-- Error Handling: 3 tests
-- Performance: 2 tests
-- Edge Cases: 2 tests
-- Multi-Provider: 1 test
-- Correctness Judge (API): 7 tests
-- Batch Correctness: 1 test
-
-**Expected Pass Rate:** 100% (all tests should pass with a properly configured environment)
-
-**Note:** Correctness judge tests (17-24) require enabling the correctness judge in `configs/judges.yaml` by setting `enabled: true`.
-
-**Configuration Requirements:**
-- Valid AWS credentials (if using Bedrock)
-- Valid OpenAI API key (if using GPT models)
-- Properly configured `judges.yaml` with `modelFamily` and `modelID` for each judge
-- All model IDs must match available models in your AWS region / OpenAI account
-
----
-
-## Quick Validation Script
-
-Run this script to quickly test key scenarios:
-
-```bash
-#!/bin/bash
-# quick-test.sh - Fast validation of eval-agent API
-
-API_URL="http://localhost:18082"
-
-echo "Testing eval-agent API..."
-
-# TC 1: Health check
-echo -n "TC 1 (Health): "
-curl -s $API_URL/api/v1/health | jq -r '.status' || echo "FAIL"
-
-# TC 2: Happy path
-echo -n "TC 2 (Happy path): "
-RESULT=$(curl -s -X POST $API_URL/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"event_id":"test-001","event_type":"agent_response","agent":{"name":"test"},"interaction":{"user_query":"What is the capital of France?","context":"France is in Europe. Paris is its capital.","answer":"The capital of France is Paris."}}')
-VERDICT=$(echo $RESULT | jq -r '.verdict')
-STAGES=$(echo $RESULT | jq '.stages | length')
-if [ "$VERDICT" = "pass" ] && [ "$STAGES" -eq 8 ]; then
-  echo "PASS (verdict=$VERDICT, stages=$STAGES)"
-else
-  echo "FAIL (verdict=$VERDICT, stages=$STAGES, expected: pass, 8)"
-fi
-
-# TC 3: Early exit
-echo -n "TC 3 (Early exit): "
-RESULT=$(curl -s -X POST $API_URL/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"event_id":"test-002","event_type":"agent_response","agent":{"name":"test"},"interaction":{"user_query":"Explain quantum computing","context":"Quantum computing...","answer":"Yes."}}')
-VERDICT=$(echo $RESULT | jq -r '.verdict')
-STAGES=$(echo $RESULT | jq '.stages | length')
-if [ "$VERDICT" = "fail" ] && [ "$STAGES" -eq 3 ]; then
-  echo "PASS (verdict=$VERDICT, stages=$STAGES)"
-else
-  echo "FAIL (verdict=$VERDICT, stages=$STAGES, expected: fail, 3)"
-fi
-
-# TC 6: Single judge
-echo -n "TC 6 (Single judge): "
-RESULT=$(curl -s -X POST $API_URL/api/v1/evaluate/judge/relevance \
-  -H "Content-Type: application/json" \
-  -d '{"event_id":"test-005","event_type":"agent_response","agent":{"name":"test"},"interaction":{"user_query":"What is ML?","context":"ML is AI subset","answer":"Machine learning is a method where computers learn from data."}}')
-STAGES=$(echo $RESULT | jq '.stages | length')
-JUDGE_NAME=$(echo $RESULT | jq -r '.stages[0].name')
-if [ "$STAGES" -eq 1 ] && [ "$JUDGE_NAME" = "relevance-judge" ]; then
-  echo "PASS (stages=$STAGES, judge=$JUDGE_NAME)"
-else
-  echo "FAIL (stages=$STAGES, judge=$JUDGE_NAME, expected: 1 stage, relevance-judge)"
-fi
-
-echo ""
-echo "Quick validation complete. Run full test cases for comprehensive validation."
-```
-
-**Usage:**
-```bash
-chmod +x quick-test.sh
-./quick-test.sh
-```
-
-**Expected Output:**
-```
-Testing eval-agent API...
-TC 1 (Health): ok
-TC 2 (Happy path): PASS (verdict=pass, stages=8)
-TC 3 (Early exit): PASS (verdict=fail, stages=3)
-TC 6 (Single judge): PASS (stages=1, judge=relevance-judge)
-
-Quick validation complete. Run full test cases for comprehensive validation.
 ```
