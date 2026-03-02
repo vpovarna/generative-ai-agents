@@ -18,18 +18,17 @@ judges:
       description: "Evaluates if the answer addresses the query"
       requires_context: false
       prompt: |
-        You are an evaluation judge.
-        Score how relevant the answer is to the query on a scale from 0.1 to 1.0
+        You are an evaluation judge. Score how relevant the answer is to the query on a scale from 0.0 to 1.0.
 
         Query: {{.Query}}
         Answer: {{.Answer}}
 
-        Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+        Output ONLY valid JSON (no markdown, no explanation):
         {"score": <float>, "reason": "<string>"}
       model:
-        max_tokens: 256
+        max_tokens: 200
         temperature: 0.0
-        retry: false
+        retry: true
 
     # Faithfulness Judge: Evaluates if answer is grounded in context (no hallucinations)
     - name: faithfulness
