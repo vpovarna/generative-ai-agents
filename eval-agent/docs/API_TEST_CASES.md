@@ -2,6 +2,8 @@
 
 Comprehensive test scenarios for the eval-agent HTTP API.
 
+**Important:** Expected responses show **representative results**. Actual LLM judge scores may vary slightly (±0.1) due to model variability, but the overall patterns (high/medium/low scores, verdicts, stage counts) should match. Focus on validating behavior patterns rather than exact numeric matches.
+
 ## Setup
 
 ### Prerequisites
@@ -84,16 +86,19 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
   }'
 ```
 
-**Expected Response:**
+**Expected Response (truncated, full response has 8 stages):**
 ```json
 {
   "id": "test-001",
   "stages": [
-    {"name": "length-checker", "score": 1.0, "reason": "...", "duration_ns": 15000},
-    {"name": "overlap-checker", "score": 0.85, "reason": "...", "duration_ns": 12000},
-    {"name": "format-checker", "score": 1.0, "reason": "...", "duration_ns": 10000},
-    {"name": "relevance-judge", "score": 0.95, "reason": "...", "duration_ns": 850000000},
-    {"name": "faithfulness-judge", "score": 1.0, "reason": "...", "duration_ns": 820000000}
+    {"name": "length-checker", "score": 1.0, "reason": "Answer Length is acceptable", "duration_ns": 15000},
+    {"name": "overlap-checker", "score": 0.85, "reason": "Good keyword overlap", "duration_ns": 12000},
+    {"name": "format-checker", "score": 1.0, "reason": "Valid Answer", "duration_ns": 10000},
+    {"name": "relevance-judge", "score": 0.95, "reason": "Answer directly addresses the query", "duration_ns": 1850000000},
+    {"name": "faithfulness-judge", "score": 1.0, "reason": "Grounded in context", "duration_ns": 1820000000},
+    {"name": "coherence-judge", "score": 1.0, "duration_ns": 1780000000},
+    {"name": "completeness-judge", "score": 1.0, "duration_ns": 1750000000},
+    {"name": "instruction-judge", "score": 1.0, "duration_ns": 1690000000}
   ],
   "confidence": 0.92,
   "verdict": "pass"
@@ -104,7 +109,8 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - Status Code: 200
 - `confidence` > 0.8
 - `verdict` = "pass"
-- 8 stages (3 prechecks + 5 judges)
+- **8 stages** (3 prechecks + 5 judges)
+- All scores high (answer is correct, relevant, and grounded)
 - Response time: ~3-4 seconds (judges run in parallel)
 
 ### Test Case 3: Early Exit - Very Short Answer
@@ -570,6 +576,16 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 
 The correctness judge evaluates semantic similarity between an answer and expected output (ground truth). It's disabled by default and requires `expected_output` field in requests.
 
+**Important Notes:**
+- These test cases show **expected patterns** - actual scores may vary slightly depending on the LLM's response
+- **Enable the correctness judge first** (see Test Case 17) before running tests 18-24
+- Scores should be in the expected range (±0.1) even if not exact matches
+- The key behaviors to validate:
+  - Exact matches score ~1.0
+  - Semantic matches (e.g., "4" vs "four") score ~0.8-0.9
+  - Wrong answers score ~0.0-0.2
+  - Auto-skip works when `expected_output` is missing
+
 ### Test Case 17: Enable Correctness Judge
 
 **Setup:**
@@ -781,7 +797,7 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
 - All judges score high
 - Response time: ~3-4 seconds (judges run in parallel)
 
-### Test Case 22: Full Pipeline with Correctness - Wrong Answer
+### Test Case 22: Full Pipeline with Correctness - Factually Wrong but Well-Formed Answer
 
 **Request:**
 ```bash
@@ -792,10 +808,10 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
     "event_type": "agent_response",
     "agent": {"name": "test-agent", "type": "rag", "version": "1.0"},
     "interaction": {
-      "user_query": "What is 10 + 5?",
-      "context": "Basic arithmetic operations.",
-      "answer": "The answer is 20.",
-      "expected_output": "15"
+      "user_query": "What is the largest planet in our solar system?",
+      "context": "The solar system contains eight planets orbiting the Sun.",
+      "answer": "The largest planet in our solar system is Saturn, which is known for its distinctive ring system.",
+      "expected_output": "Jupiter"
     }
   }'
 ```
@@ -806,28 +822,33 @@ curl -X POST http://localhost:18082/api/v1/evaluate \
   "id": "test-correctness-pipeline-002",
   "stages": [
     {"name": "length-checker", "score": 1.0, "duration_ns": 14000},
-    {"name": "overlap-checker", "score": 0.6, "duration_ns": 11000},
+    {"name": "overlap-checker", "score": 0.75, "duration_ns": 11000},
     {"name": "format-checker", "score": 1.0, "duration_ns": 9000},
-    {"name": "relevance-judge", "score": 0.8, "duration_ns": 1950000000},
-    {"name": "faithfulness-judge", "score": 0.9, "duration_ns": 1880000000},
+    {"name": "relevance-judge", "score": 0.9, "duration_ns": 1950000000},
+    {"name": "faithfulness-judge", "score": 0.8, "duration_ns": 1880000000},
     {"name": "coherence-judge", "score": 1.0, "duration_ns": 1820000000},
-    {"name": "completeness-judge", "score": 0.9, "duration_ns": 1790000000},
+    {"name": "completeness-judge", "score": 1.0, "duration_ns": 1790000000},
     {"name": "instruction-judge", "score": 1.0, "duration_ns": 1750000000},
-    {"name": "correctness-judge", "score": 0.0, "reason": "Completely different - answer says 20 but expected output is 15", "duration_ns": 1680000000}
+    {"name": "correctness-judge", "score": 0.1, "reason": "Incorrect - Saturn is not the largest planet. The expected answer is Jupiter.", "duration_ns": 1680000000}
   ],
-  "confidence": 0.65,
+  "confidence": 0.72,
   "verdict": "review"
 }
 ```
 
 **Expected:**
 - Status Code: 200
-- `confidence` ~0.65 (dragged down by correctness score of 0.0)
-- `verdict` = "review" or "fail"
+- `confidence` ~0.72 (only correctness is low, other judges score high)
+- `verdict` = "review"
 - 9 stages (full pipeline)
-- Other judges score reasonably (answer is coherent, relevant, faithful to context)
-- **Correctness judge: 0.0** - correctly identifies 20 ≠ 15
-- Demonstrates that correctness judge catches factual errors even when other quality dimensions are fine
+- **Key insight**: Other judges score well because the answer is:
+  - **Relevant**: Directly addresses "largest planet" question (0.9)
+  - **Faithful**: Talks about solar system planets from context (0.8)
+  - **Coherent**: Logically structured and well-formed (1.0)
+  - **Complete**: Fully answers the question asked (1.0)
+  - **Instruction-following**: No format violations (1.0)
+- **Correctness judge: 0.1** - Only judge that catches Saturn ≠ Jupiter
+- Demonstrates that correctness is orthogonal to quality - you can have a well-formed, coherent answer that's factually wrong
 
 ### Test Case 23: Correctness Judge Auto-Skip (No Expected Output)
 
@@ -903,13 +924,29 @@ go run cmd/batch/main.go \
   -workers 2
 ```
 
-**Expected output file `correctness_results.jsonl`:**
-```jsonl
-{"id":"batch-001","stages":[{"name":"correctness-judge","score":1.0,"reason":"Exact match"}],"confidence":0.95,"verdict":"pass"}
-{"id":"batch-002","stages":[{"name":"correctness-judge","score":0.9,"reason":"Semantically equivalent"}],"confidence":0.88,"verdict":"pass"}
-{"id":"batch-003","stages":[{"name":"correctness-judge","score":0.1,"reason":"Wrong answer - Milan is not Rome"}],"confidence":0.35,"verdict":"fail"}
-{"id":"batch-004","stages":[{"name":"correctness-judge","score":0.7,"reason":"Partially correct - missing details"}],"confidence":0.68,"verdict":"review"}
+**Expected output (showing full pipeline):**
+
+Each record will have 9 stages (3 prechecks + 6 judges). Example for batch-001:
+```json
+{
+  "id": "batch-001",
+  "stages": [
+    {"name": "length-checker", "score": 1.0},
+    {"name": "overlap-checker", "score": 0.9},
+    {"name": "format-checker", "score": 1.0},
+    {"name": "relevance-judge", "score": 0.95},
+    {"name": "faithfulness-judge", "score": 0.9},
+    {"name": "coherence-judge", "score": 1.0},
+    {"name": "completeness-judge", "score": 1.0},
+    {"name": "instruction-judge", "score": 1.0},
+    {"name": "correctness-judge", "score": 1.0, "reason": "Exact match"}
+  ],
+  "confidence": 0.96,
+  "verdict": "pass"
+}
 ```
+
+**Note:** Full pipeline runs (all judges + prechecks). For brevity, examples below show only correctness-judge scores.
 
 **Console summary:**
 ```
@@ -972,6 +1009,28 @@ paste <(jq -r '.stages[] | select(.name == "correctness-judge") | .score' regres
 # 1.00 -> 0.95 (−0.05 change)  ← identified regression
 # 0.90 -> 0.85 (−0.05 change)  ← identified regression
 ```
+
+### Correctness Test Case Summary
+
+**Validation Checklist for Correctness Tests:**
+
+| Test | What It Tests | Key Validation |
+|------|---------------|----------------|
+| TC 17 | Setup | Judge enabled, server logs show 6 judges |
+| TC 18 | Exact match | Score = 1.0, verdict = pass |
+| TC 19 | Semantic match | Score ~0.9, "four" = "4" recognized |
+| TC 20 | Wrong answer | Score ~0.1, Milan ≠ Rome detected |
+| TC 21 | Full pipeline (correct) | 9 stages, all high scores, verdict = pass |
+| TC 22 | Full pipeline (wrong) | 9 stages, only correctness low, verdict = review |
+| TC 23 | Auto-skip | 8 stages (no correctness), no errors |
+| TC 24 | Batch processing | All records processed, varied scores |
+
+**Common Issues:**
+
+1. **Correctness judge not running** → Check it's enabled in `judges.yaml` and server restarted
+2. **Unexpected scores** → LLM variability is normal; validate pattern (high/medium/low) not exact value
+3. **"judge not found: correctness"** → Judge not enabled or server not restarted after config change
+4. **All judges failing (TC 22)** → Expected if answer is too obviously wrong; use more subtle errors
 
 ---
 
@@ -1051,3 +1110,81 @@ DBG all judges completed judgeCount=5
 - Valid OpenAI API key (if using GPT models)
 - Properly configured `judges.yaml` with `modelFamily` and `modelID` for each judge
 - All model IDs must match available models in your AWS region / OpenAI account
+
+---
+
+## Quick Validation Script
+
+Run this script to quickly test key scenarios:
+
+```bash
+#!/bin/bash
+# quick-test.sh - Fast validation of eval-agent API
+
+API_URL="http://localhost:18082"
+
+echo "Testing eval-agent API..."
+
+# TC 1: Health check
+echo -n "TC 1 (Health): "
+curl -s $API_URL/api/v1/health | jq -r '.status' || echo "FAIL"
+
+# TC 2: Happy path
+echo -n "TC 2 (Happy path): "
+RESULT=$(curl -s -X POST $API_URL/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{"event_id":"test-001","event_type":"agent_response","agent":{"name":"test"},"interaction":{"user_query":"What is the capital of France?","context":"France is in Europe. Paris is its capital.","answer":"The capital of France is Paris."}}')
+VERDICT=$(echo $RESULT | jq -r '.verdict')
+STAGES=$(echo $RESULT | jq '.stages | length')
+if [ "$VERDICT" = "pass" ] && [ "$STAGES" -eq 8 ]; then
+  echo "PASS (verdict=$VERDICT, stages=$STAGES)"
+else
+  echo "FAIL (verdict=$VERDICT, stages=$STAGES, expected: pass, 8)"
+fi
+
+# TC 3: Early exit
+echo -n "TC 3 (Early exit): "
+RESULT=$(curl -s -X POST $API_URL/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{"event_id":"test-002","event_type":"agent_response","agent":{"name":"test"},"interaction":{"user_query":"Explain quantum computing","context":"Quantum computing...","answer":"Yes."}}')
+VERDICT=$(echo $RESULT | jq -r '.verdict')
+STAGES=$(echo $RESULT | jq '.stages | length')
+if [ "$VERDICT" = "fail" ] && [ "$STAGES" -eq 3 ]; then
+  echo "PASS (verdict=$VERDICT, stages=$STAGES)"
+else
+  echo "FAIL (verdict=$VERDICT, stages=$STAGES, expected: fail, 3)"
+fi
+
+# TC 6: Single judge
+echo -n "TC 6 (Single judge): "
+RESULT=$(curl -s -X POST $API_URL/api/v1/evaluate/judge/relevance \
+  -H "Content-Type: application/json" \
+  -d '{"event_id":"test-005","event_type":"agent_response","agent":{"name":"test"},"interaction":{"user_query":"What is ML?","context":"ML is AI subset","answer":"Machine learning is a method where computers learn from data."}}')
+STAGES=$(echo $RESULT | jq '.stages | length')
+JUDGE_NAME=$(echo $RESULT | jq -r '.stages[0].name')
+if [ "$STAGES" -eq 1 ] && [ "$JUDGE_NAME" = "relevance-judge" ]; then
+  echo "PASS (stages=$STAGES, judge=$JUDGE_NAME)"
+else
+  echo "FAIL (stages=$STAGES, judge=$JUDGE_NAME, expected: 1 stage, relevance-judge)"
+fi
+
+echo ""
+echo "Quick validation complete. Run full test cases for comprehensive validation."
+```
+
+**Usage:**
+```bash
+chmod +x quick-test.sh
+./quick-test.sh
+```
+
+**Expected Output:**
+```
+Testing eval-agent API...
+TC 1 (Health): ok
+TC 2 (Happy path): PASS (verdict=pass, stages=8)
+TC 3 (Early exit): PASS (verdict=fail, stages=3)
+TC 6 (Single judge): PASS (stages=1, judge=relevance-judge)
+
+Quick validation complete. Run full test cases for comprehensive validation.
+```
