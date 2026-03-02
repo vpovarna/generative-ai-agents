@@ -48,7 +48,14 @@ func LoadConfig() *Config {
 }
 
 func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependencies, error) {
-	registry, err := createLLMClientRegistry(ctx, cfg)
+	// Load judges configuration from YAML first
+	judgesConfig, err := config.LoadJudgesConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load judges config: %w", err)
+	}
+
+	// Create registry with all models referenced in judges config
+	registry, err := createLLMClientRegistry(ctx, cfg, judgesConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create LLM client registry: %w", err)
 	}
@@ -59,12 +66,6 @@ func Wire(ctx context.Context, cfg *Config, logger *zerolog.Logger) (*Dependenci
 		&prechecks.OverlapChecker{MinOverlapThreshold: 0.3},
 		&prechecks.FormatChecker{},
 	})
-
-	// Load judges configuration from YAML
-	judgesConfig, err := config.LoadJudgesConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load judges config: %w", err)
-	}
 
 	// Create judge pool and build judges from config
 	judgePool := judge.NewJudgePool(registry, logger)
@@ -117,35 +118,60 @@ func getEnvFloat(key string, defaultValue float64) float64 {
 }
 
 //TODO: Replace this with an proper llm_config.yaml file
-func createLLMClientRegistry(ctx context.Context, cfg *Config) (*llm.LLMClientRegistry, error) {
+func createLLMClientRegistry(ctx context.Context, cfg *Config, judgesConfig *config.JudgesConfig) (*llm.LLMClientRegistry, error) {
 	clients := make(map[llm.LLMFamily]map[string]llm.LLMClient)
 
-	// Initialize Anthropic (Bedrock) clients if configured
-	if cfg.AWSRegion != "" && cfg.ClaudeModelID != "" {
-		claudeClient, err := bedrock.NewClient(ctx, cfg.AWSRegion, cfg.ClaudeModelID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Bedrock client: %w", err)
-		}
+	// Extract all unique models from judges config
+	type modelKey struct {
+		family  string
+		modelID string
+	}
+	uniqueModels := make(map[modelKey]bool)
 
-		clients[llm.FamilyAnthropic] = map[string]llm.LLMClient{
-			cfg.ClaudeModelID: claudeClient,
+	for _, evaluator := range judgesConfig.Judges.Evaluators {
+		if evaluator.Model != nil && evaluator.Model.ModelFamily != "" && evaluator.Model.ModelID != "" {
+			uniqueModels[modelKey{evaluator.Model.ModelFamily, evaluator.Model.ModelID}] = true
 		}
 	}
 
-	// Initialize OpenAI clients if configured
-	if cfg.OpenAIKey != "" && cfg.OpenAIModelID != "" {
-		openaiClient, err := gpt.NewClient(cfg.OpenAIKey, cfg.OpenAIModelID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create OpenAI client: %w", err)
-		}
+	// Create clients for each unique model
+	for model := range uniqueModels {
+		family := llm.LLMFamily(model.family)
 
-		clients[llm.FamilyOpenAI] = map[string]llm.LLMClient{
-			cfg.OpenAIModelID: openaiClient,
+		switch family {
+		case llm.FamilyAnthropic:
+			if cfg.AWSRegion == "" {
+				return nil, fmt.Errorf("AWS_REGION required for anthropic model %s", model.modelID)
+			}
+			client, err := bedrock.NewClient(ctx, cfg.AWSRegion, model.modelID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create Bedrock client for model %s: %w", model.modelID, err)
+			}
+			if clients[family] == nil {
+				clients[family] = make(map[string]llm.LLMClient)
+			}
+			clients[family][model.modelID] = client
+
+		case llm.FamilyOpenAI:
+			if cfg.OpenAIKey == "" {
+				return nil, fmt.Errorf("OPEN_AI_KEY required for openai model %s", model.modelID)
+			}
+			client, err := gpt.NewClient(cfg.OpenAIKey, model.modelID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create OpenAI client for model %s: %w", model.modelID, err)
+			}
+			if clients[family] == nil {
+				clients[family] = make(map[string]llm.LLMClient)
+			}
+			clients[family][model.modelID] = client
+
+		default:
+			return nil, fmt.Errorf("unsupported model family: %s", model.family)
 		}
 	}
 
 	if len(clients) == 0 {
-		return nil, fmt.Errorf("no LLM clients configured - check AWS_REGION/CLAUDE_MODEL_ID or OPEN_AI_KEY/OPEN_AI_MODEL_ID")
+		return nil, fmt.Errorf("no LLM clients configured - check judges.yaml has valid models with modelFamily and modelID")
 	}
 
 	return llm.NewLLMClientRegistry(clients), nil
