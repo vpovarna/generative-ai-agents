@@ -135,7 +135,7 @@ judges:
 
     # Correctness Judge: Evaluates semantic match with expected output (ground truth)
     - name: correctness
-      enabled: false
+      enabled: true
       description: "Evaluates semantic similarity between answer and expected output"
       requires_context: false
       requires_expected_output: true
