@@ -9,4 +9,5 @@ import (
 type Judge interface {
 	Name() string
 	Evaluate(ctx context.Context, evaluationContext models.EvaluationContext) models.StageResult
+	RequiresExpectedOutput() bool
 }

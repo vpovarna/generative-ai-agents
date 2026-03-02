@@ -11,20 +11,22 @@ import (
 
 // EvaluateInput is the MCP tool input schema for full pipeline evaluation.
 type EvaluateInput struct {
-	EventID string `json:"event_id" jsonschema:"unique event identifier"`
-	Query   string `json:"user_query" jsonschema:"user's original query"`
-	Answer  string `json:"answer" jsonschema:"agent response to evaluate"`
-	Context string `json:"context,omitempty" jsonschema:"optional context or retrieved documents"`
+	EventID        string `json:"event_id" jsonschema:"unique event identifier"`
+	Query          string `json:"user_query" jsonschema:"user's original query"`
+	Answer         string `json:"answer" jsonschema:"agent response to evaluate"`
+	Context        string `json:"context,omitempty" jsonschema:"optional context or retrieved documents"`
+	ExpectedOutput string `json:"expected_output,omitempty" jsonschema:"optional ground truth for correctness evaluation"`
 }
 
 // EvaluateSingleJudgeInput is the MCP tool input schema for single judge evaluation.
 type EvaluateSingleJudgeInput struct {
-	EventID   string  `json:"event_id" jsonschema:"unique event identifier"`
-	Query     string  `json:"user_query" jsonschema:"user's original query"`
-	Answer    string  `json:"answer" jsonschema:"agent response to evaluate"`
-	Context   string  `json:"context,omitempty" jsonschema:"optional context or retrieved documents"`
-	JudgeName string  `json:"judge_name" jsonschema:"judge name: relevance, faithfulness, coherence, completeness, or instruction"`
-	Threshold float64 `json:"threshold,omitempty" jsonschema:"pass/fail threshold (0.0-1.0, default: 0.7)"`
+	EventID        string  `json:"event_id" jsonschema:"unique event identifier"`
+	Query          string  `json:"user_query" jsonschema:"user's original query"`
+	Answer         string  `json:"answer" jsonschema:"agent response to evaluate"`
+	Context        string  `json:"context,omitempty" jsonschema:"optional context or retrieved documents"`
+	ExpectedOutput string  `json:"expected_output,omitempty" jsonschema:"optional ground truth for correctness evaluation"`
+	JudgeName      string  `json:"judge_name" jsonschema:"judge name: relevance, faithfulness, coherence, completeness, instruction, or correctness"`
+	Threshold      float64 `json:"threshold,omitempty" jsonschema:"pass/fail threshold (0.0-1.0, default: 0.7)"`
 }
 
 // NewEvaluateHandler returns a tool handler that uses the given executor.
@@ -43,11 +45,12 @@ func EvaluateResponse(
 	input EvaluateInput,
 ) (*mcp.CallToolResult, models.EvaluationResult, error) {
 	evalCtx := models.EvaluationContext{
-		RequestID: input.EventID,
-		Query:     input.Query,
-		Context:   input.Context,
-		Answer:    input.Answer,
-		CreatedAt: time.Now(),
+		RequestID:      input.EventID,
+		Query:          input.Query,
+		Context:        input.Context,
+		Answer:         input.Answer,
+		ExpectedOutput: input.ExpectedOutput,
+		CreatedAt:      time.Now(),
 	}
 
 	result := exec.Execute(ctx, evalCtx)
@@ -70,11 +73,12 @@ func EvaluateSingleJudge(
 	input EvaluateSingleJudgeInput,
 ) (*mcp.CallToolResult, models.EvaluationResult, error) {
 	evalCtx := models.EvaluationContext{
-		RequestID: input.EventID,
-		Query:     input.Query,
-		Context:   input.Context,
-		Answer:    input.Answer,
-		CreatedAt: time.Now(),
+		RequestID:      input.EventID,
+		Query:          input.Query,
+		Context:        input.Context,
+		Answer:         input.Answer,
+		ExpectedOutput: input.ExpectedOutput,
+		CreatedAt:      time.Now(),
 	}
 
 	// Default threshold to 0.7 if not provided

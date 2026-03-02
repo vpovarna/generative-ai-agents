@@ -125,10 +125,11 @@ func (c *Consumer) ack(ctx context.Context, msgID string) {
 
 func normalize(req models.EvaluationRequest) models.EvaluationContext {
 	return models.EvaluationContext{
-		RequestID: req.EventID,
-		Query:     req.Interaction.UserQuery,
-		Context:   req.Interaction.Context,
-		Answer:    req.Interaction.Answer,
-		CreatedAt: time.Now(),
+		RequestID:      req.EventID,
+		Query:          req.Interaction.UserQuery,
+		Context:        req.Interaction.Context,
+		Answer:         req.Interaction.Answer,
+		ExpectedOutput: req.Interaction.ExpectedOutput,
+		CreatedAt:      time.Now(),
 	}
 }

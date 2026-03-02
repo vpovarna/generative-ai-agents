@@ -13,7 +13,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	models "github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -70,56 +69,16 @@ func (mr *MockJudgeMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockJudge)(nil).Name))
 }
 
-// MockLLMClient is a mock of LLMClient interface.
-type MockLLMClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockLLMClientMockRecorder
-	isgomock struct{}
-}
-
-// MockLLMClientMockRecorder is the mock recorder for MockLLMClient.
-type MockLLMClientMockRecorder struct {
-	mock *MockLLMClient
-}
-
-// NewMockLLMClient creates a new mock instance.
-func NewMockLLMClient(ctrl *gomock.Controller) *MockLLMClient {
-	mock := &MockLLMClient{ctrl: ctrl}
-	mock.recorder = &MockLLMClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockLLMClient) EXPECT() *MockLLMClientMockRecorder {
-	return m.recorder
-}
-
-// InvokeModel mocks base method.
-func (m *MockLLMClient) InvokeModel(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
+// RequiresExpectedOutput mocks base method.
+func (m *MockJudge) RequiresExpectedOutput() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvokeModel", ctx, request)
-	ret0, _ := ret[0].(*llm.LLMResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "RequiresExpectedOutput")
+	ret0, _ := ret[0].(bool)
+	return ret0
 }
 
-// InvokeModel indicates an expected call of InvokeModel.
-func (mr *MockLLMClientMockRecorder) InvokeModel(ctx, request any) *gomock.Call {
+// RequiresExpectedOutput indicates an expected call of RequiresExpectedOutput.
+func (mr *MockJudgeMockRecorder) RequiresExpectedOutput() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeModel", reflect.TypeOf((*MockLLMClient)(nil).InvokeModel), ctx, request)
-}
-
-// InvokeModelWithRetry mocks base method.
-func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvokeModelWithRetry", ctx, request)
-	ret0, _ := ret[0].(*llm.LLMResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// InvokeModelWithRetry indicates an expected call of InvokeModelWithRetry.
-func (mr *MockLLMClientMockRecorder) InvokeModelWithRetry(ctx, request any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeModelWithRetry", reflect.TypeOf((*MockLLMClient)(nil).InvokeModelWithRetry), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequiresExpectedOutput", reflect.TypeOf((*MockJudge)(nil).RequiresExpectedOutput))
 }

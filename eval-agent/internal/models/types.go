@@ -26,9 +26,10 @@ type Agent struct {
 }
 
 type Interaction struct {
-	UserQuery string `json:"user_query"`
-	Context   string `json:"context"`
-	Answer    string `json:"answer"`
+	UserQuery      string `json:"user_query"`
+	Context        string `json:"context"`
+	Answer         string `json:"answer"`
+	ExpectedOutput string `json:"expected_output,omitempty"` // Optional: ground truth for correctness evaluation
 }
 
 // Input message
@@ -43,11 +44,12 @@ type EvaluationRequest struct {
 
 // Normalized internal object
 type EvaluationContext struct {
-	RequestID string    `json:"request_id" jsonschema:"required,description=Unique event identifier"`
-	Query     string    `json:"user_query" jsonschema:"required,description=User's original query"`
-	Context   string    `json:"context,omitempty" jsonschema:"description=Optional context or retrieved documents"`
-	Answer    string    `json:"answer" jsonschema:"required,description=Agent response to evaluate"`
-	CreatedAt time.Time `json:"created_at" jsonschema:"description=Time when the evaluation context was created"`
+	RequestID      string    `json:"request_id" jsonschema:"required,description=Unique event identifier"`
+	Query          string    `json:"user_query" jsonschema:"required,description=User's original query"`
+	Context        string    `json:"context,omitempty" jsonschema:"description=Optional context or retrieved documents"`
+	Answer         string    `json:"answer" jsonschema:"required,description=Agent response to evaluate"`
+	ExpectedOutput string    `json:"expected_output,omitempty" jsonschema:"description=Optional ground truth for correctness evaluation"`
+	CreatedAt      time.Time `json:"created_at" jsonschema:"description=Time when the evaluation context was created"`
 }
 
 // One evaluator's output
