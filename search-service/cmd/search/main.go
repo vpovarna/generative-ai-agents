@@ -9,10 +9,11 @@ import (
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/joho/godotenv"
+	"github.com/povarna/generative-ai-agents/search-service/internal/api"
+	"github.com/povarna/generative-ai-agents/search-service/internal/api/middleware"
 	"github.com/povarna/generative-ai-agents/search-service/internal/bedrock"
 	"github.com/povarna/generative-ai-agents/search-service/internal/database"
 	"github.com/povarna/generative-ai-agents/search-service/internal/embedding"
-	"github.com/povarna/generative-ai-agents/search-service/internal/search"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -57,12 +58,14 @@ func main() {
 
 	// Wire Components
 	embedder := embedding.NewBedrockEmbedder(bedrockClient.Client)
-	searchService := search.NewService(db, embedder)
-	handler := search.NewSearchHandler(searchService)
+	searchService := api.NewService(db, embedder)
+	handler := api.NewSearchHandler(searchService)
 
-	// Setup routes
 	container := restful.NewContainer()
-	search.RegisterRoutes(container, handler)
+	container.Filter(middleware.Logger)
+	container.Filter(middleware.RecoverPanic)
+
+	api.RegisterRoutes(container, handler)
 
 	// CORS
 	corsHandler := cors.New(cors.Options{

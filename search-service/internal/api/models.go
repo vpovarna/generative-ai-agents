@@ -1,4 +1,4 @@
-package search
+package api
 
 type SearchRequest struct {
 	Query string `json:"query"`
@@ -6,11 +6,11 @@ type SearchRequest struct {
 }
 
 type SearchResult struct {
-	ChunkID    string  `json:"chunk_id"`
-	DocumentID string  `json:"document_id"`
-	Content    string  `json:"content"`
-	Score      float64 `json:"score"`
-	Rank       int     `json:"rank"`
+	ChunkID    string            `json:"chunk_id"`
+	DocumentID string            `json:"document_id"`
+	Content    string            `json:"content"`
+	Score      float64           `json:"score"`
+	Rank       int               `json:"rank"`
 	Metadata   map[string]string `json:"metadata"`
 }
 

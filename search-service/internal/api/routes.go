@@ -1,4 +1,4 @@
-package search
+package api
 
 import (
 	"github.com/emicklei/go-restful/v3"
