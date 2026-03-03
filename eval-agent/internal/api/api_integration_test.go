@@ -407,20 +407,21 @@ func setupTestAPI(t *testing.T) *restful.Container {
 	case "openai":
 		apiKey := os.Getenv("OPEN_AI_KEY")
 		modelID := os.Getenv("OPEN_AI_MODEL_ID")
+		azureEndpoint := os.Getenv("AZURE_OPENAI_ENDPOINT")
 		modelFamily := os.Getenv("DEFAULT_MODEL_FAMILY")
 		if modelFamily == "" {
 			modelFamily = "openai"
 		}
 
-		if apiKey == "" || modelID == "" {
-			t.Skip("Skipping real OpenAI integration - OPEN_AI_KEY or OPEN_AI_MODEL_ID not set")
+		if apiKey == "" || modelID == "" || azureEndpoint == "" {
+			t.Skip("Skipping real Azure OpenAI integration - OPEN_AI_KEY, OPEN_AI_MODEL_ID or AZURE_OPENAI_ENDPOINT not set")
 		}
 
-		llmClient, err := gpt.NewClient(apiKey, modelID)
+		llmClient, err := gpt.NewClient(apiKey, modelID, azureEndpoint)
 		if err != nil {
-			t.Fatalf("Failed to create OpenAI client: %v", err)
+			t.Fatalf("Failed to create Azure OpenAI client: %v", err)
 		}
-		t.Logf("Using REAL OpenAI GPT: model=%s", modelID)
+		t.Logf("Using REAL Azure OpenAI GPT: model=%s, endpoint=%s", modelID, azureEndpoint)
 
 		registry = llm.NewLLMClientRegistry(map[llm.LLMFamily]map[string]llm.LLMClient{
 			llm.LLMFamily(modelFamily): {

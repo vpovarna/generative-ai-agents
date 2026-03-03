@@ -18,14 +18,15 @@ import (
 )
 
 type Config struct {
-	AWSRegion          string
-	ClaudeModelID      string
-	OpenAIKey          string
-	OpenAIModelID      string
-	DefaultProvider    string
-	PrecheckWeight     float64
-	LLMJudgeWeight     float64
-	EarlyExitThreshold float64
+	AWSRegion             string
+	ClaudeModelID         string
+	OpenAIKey             string
+	OpenAIModelID         string
+	AzureOpenAIEndpoint   string
+	DefaultProvider       string
+	PrecheckWeight        float64
+	LLMJudgeWeight        float64
+	EarlyExitThreshold    float64
 }
 
 type Dependencies struct {
@@ -36,14 +37,15 @@ type Dependencies struct {
 
 func LoadConfig() *Config {
 	return &Config{
-		AWSRegion:          getEnv("AWS_REGION", "us-east-1"),
-		ClaudeModelID:      getEnv("CLAUDE_MODEL_ID", ""),
-		OpenAIKey:          getEnv("OPEN_AI_KEY", ""),
-		OpenAIModelID:      getEnv("OPEN_AI_MODEL_ID", ""),
-		DefaultProvider:    getEnv("DEFAULT_LLM_PROVIDER", "bedrock"),
-		PrecheckWeight:     getEnvFloat("PRECHECK_WEIGHT", 0.3),
-		LLMJudgeWeight:     getEnvFloat("LLM_JUDGE_WEIGHT", 0.7),
-		EarlyExitThreshold: getEnvFloat("EARLY_EXIT_THRESHOLD", 0.2),
+		AWSRegion:           getEnv("AWS_REGION", "us-east-1"),
+		ClaudeModelID:       getEnv("CLAUDE_MODEL_ID", ""),
+		OpenAIKey:           getEnv("OPEN_AI_KEY", ""),
+		OpenAIModelID:       getEnv("OPEN_AI_MODEL_ID", ""),
+		AzureOpenAIEndpoint: getEnv("AZURE_OPENAI_ENDPOINT", ""),
+		DefaultProvider:     getEnv("DEFAULT_LLM_PROVIDER", "bedrock"),
+		PrecheckWeight:      getEnvFloat("PRECHECK_WEIGHT", 0.3),
+		LLMJudgeWeight:      getEnvFloat("LLM_JUDGE_WEIGHT", 0.7),
+		EarlyExitThreshold:  getEnvFloat("EARLY_EXIT_THRESHOLD", 0.2),
 	}
 }
 
@@ -156,9 +158,12 @@ func createLLMClientRegistry(ctx context.Context, cfg *Config, judgesConfig *con
 			if cfg.OpenAIKey == "" {
 				return nil, fmt.Errorf("OPEN_AI_KEY required for openai model %s", model.modelID)
 			}
-			client, err := gpt.NewClient(cfg.OpenAIKey, model.modelID)
+			if cfg.AzureOpenAIEndpoint == "" {
+				return nil, fmt.Errorf("AZURE_OPENAI_ENDPOINT required for openai model %s", model.modelID)
+			}
+			client, err := gpt.NewClient(cfg.OpenAIKey, model.modelID, cfg.AzureOpenAIEndpoint)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create OpenAI client for model %s: %w", model.modelID, err)
+				return nil, fmt.Errorf("failed to create Azure OpenAI client for model %s: %w", model.modelID, err)
 			}
 			if clients[family] == nil {
 				clients[family] = make(map[string]llm.LLMClient)

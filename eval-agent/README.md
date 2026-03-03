@@ -35,7 +35,7 @@ Automatically evaluates AI agent responses with **confidence scores** (0.0–1.0
 - **JSON Output** - Machine-readable validation reports for CI/CD integration
 
 ### Configuration & Flexibility
-- **Multi-Provider Support** - Mix AWS Bedrock Claude and OpenAI GPT models in a single pipeline
+- **Multi-Provider Support** - Mix AWS Bedrock Claude and Azure OpenAI GPT models in a single pipeline
 - **YAML-Driven Judges** - Edit prompts and parameters without code changes
 - **Per-Judge Model Selection** - Each judge can use a different LLM provider and model
 - **Custom Thresholds** - Adjust pass/review/fail boundaries per use case
@@ -75,7 +75,7 @@ User Query + Context + Answer
 
 **Configurable via YAML** - All judges are loaded from `configs/judges.yaml` allowing prompt customization without code changes.
 
-**Multi-Provider Support** - Each judge can use a different LLM provider. Mix AWS Bedrock Claude and OpenAI GPT models in the same evaluation pipeline. Configure per-judge in YAML.
+**Multi-Provider Support** - Each judge can use a different LLM provider. Mix AWS Bedrock Claude and Azure OpenAI GPT models in the same evaluation pipeline. Configure per-judge in YAML.
 
 | Judge | Evaluates | Scoring Rubric | Requires |
 |-------|-----------|----------------|----------|
@@ -163,7 +163,7 @@ go run cmd/batch/main.go \
 ### Prerequisites
 
 - Go 1.21+
-- **AWS credentials with Bedrock access** (if using Bedrock) OR **OpenAI API key** (if using OpenAI)
+- **AWS credentials with Bedrock access** (if using Bedrock) OR **Azure OpenAI credentials** (if using Azure OpenAI)
 
 ### Configuration
 
@@ -181,10 +181,11 @@ EVAL_AGENT_API_PORT=18082
 EARLY_EXIT_THRESHOLD=0.2
 ```
 
-**Option 2: OpenAI GPT**
+**Option 2: Azure OpenAI**
 ```env
 DEFAULT_LLM_PROVIDER=openai
-OPEN_AI_KEY=sk-...
+OPEN_AI_KEY=your_azure_openai_api_key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/openai/deployments/your-deployment-name
 DEFAULT_MODEL_FAMILY="openai"
 OPEN_AI_MODEL_ID=gpt-4o-mini
 EVAL_AGENT_API_PORT=18082
@@ -193,7 +194,7 @@ EARLY_EXIT_THRESHOLD=0.2
 
 **Option 3: Multi-Provider (Mixed Models)**
 
-You can configure both AWS Bedrock and OpenAI simultaneously, allowing different judges to use different providers. Just provide the credentials - each judge specifies its own model in `judges.yaml`:
+You can configure both AWS Bedrock and Azure OpenAI simultaneously, allowing different judges to use different providers. Just provide the credentials - each judge specifies its own model in `judges.yaml`:
 
 ```env
 # AWS Bedrock credentials (if any judge uses Bedrock)
@@ -201,8 +202,9 @@ AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 
-# OpenAI credentials (if any judge uses OpenAI)
-OPEN_AI_KEY=sk-...
+# Azure OpenAI credentials (if any judge uses Azure OpenAI)
+OPEN_AI_KEY=your_azure_openai_api_key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/openai/deployments/your-deployment-name
 
 # Default fallback (used by judges.yaml if not overridden)
 DEFAULT_MODEL_FAMILY="anthropic"
@@ -361,7 +363,7 @@ judges:
 
 **Key Configuration Options:**
 
-- `modelFamily`: LLM provider family (`"anthropic"` for AWS Bedrock Claude, `"openai"` for OpenAI GPT)
+- `modelFamily`: LLM provider family (`"anthropic"` for AWS Bedrock Claude, `"openai"` for Azure OpenAI GPT)
 - `modelID`: Specific model identifier (e.g., `us.anthropic.claude-3-5-sonnet-20241022-v2:0`, `gpt-4o-mini`)
 - `max_tokens`: Maximum tokens for judge response
 - `temperature`: Model temperature (0.0 for deterministic)
@@ -678,7 +680,7 @@ jq -s 'map(.stages[] | select(.name == "correctness-judge") | .score) | add/leng
 | **Cost Optimization** | Early exit with prechecks | Always call LLM |
 | **Dimensions** | 6 judges (relevance, faithfulness, coherence, completeness, instruction, correctness) | 1-2 judges |
 | **Ground Truth** | Optional correctness evaluation with auto-skip | Not supported |
-| **Multi-Provider** | Mix AWS Bedrock + OpenAI per judge | Single provider only |
+| **Multi-Provider** | Mix AWS Bedrock + Azure OpenAI per judge | Single provider only |
 | **Integration** | API + Batch + MCP + Redis Streams | Batch only |
 | **Configuration** | YAML-driven, no code changes | Code changes required |
 | **Output** | Confidence + Verdict + Stages | Score only |
