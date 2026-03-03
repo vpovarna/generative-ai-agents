@@ -11,8 +11,8 @@ import (
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/gpt"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/aws"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/azure"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
 	"github.com/rs/zerolog"
 )
@@ -145,7 +145,7 @@ func createLLMClientRegistry(ctx context.Context, cfg *Config, judgesConfig *con
 			if cfg.AWSRegion == "" {
 				return nil, fmt.Errorf("AWS_REGION required for anthropic model %s", model.modelID)
 			}
-			client, err := bedrock.NewClient(ctx, cfg.AWSRegion, model.modelID)
+			client, err := aws.NewClient(ctx, cfg.AWSRegion, model.modelID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create Bedrock client for model %s: %w", model.modelID, err)
 			}
@@ -161,7 +161,7 @@ func createLLMClientRegistry(ctx context.Context, cfg *Config, judgesConfig *con
 			if cfg.AzureOpenAIEndpoint == "" {
 				return nil, fmt.Errorf("AZURE_OPENAI_ENDPOINT required for openai model %s", model.modelID)
 			}
-			client, err := gpt.NewClient(cfg.OpenAIKey, model.modelID, cfg.AzureOpenAIEndpoint)
+			client, err := azure.NewClient(cfg.OpenAIKey, model.modelID, cfg.AzureOpenAIEndpoint)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create Azure OpenAI client for model %s: %w", model.modelID, err)
 			}

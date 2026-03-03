@@ -1,4 +1,4 @@
-package gpt
+package azure
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func (c *Client) InvokeModel(ctx context.Context, request llm.LLMRequest) (*llm.
 
 	output, err := c.Client.Chat.Completions.New(ctx, message)
 	if err != nil {
-		return nil, fmt.Errorf("unable to invoke gpt model. Error: %w", err)
+		return nil, fmt.Errorf("unable to invoke Azure OpenAI model. Error: %w", err)
 
 	}
 

@@ -15,7 +15,7 @@ import (
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/aws"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/stream"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/stream/redis"
@@ -37,7 +37,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// Initialize Bedrock client
+	// Initialize AWS Bedrock client
 	region := os.Getenv("AWS_REGION")
 	modelID := os.Getenv("DEFAULT_MODEL_ID")
 	modelFamily := os.Getenv("DEFAULT_MODEL_FAMILY")
@@ -45,15 +45,15 @@ func main() {
 		modelFamily = "anthropic"
 	}
 
-	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
+	awsClient, err := aws.NewClient(ctx, region, modelID)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create Bedrock client")
+		log.Fatal().Err(err).Msg("Failed to create AWS Bedrock client")
 	}
 
 	// Create LLM client registry
 	registry := llm.NewLLMClientRegistry(map[llm.LLMFamily]map[string]llm.LLMClient{
 		llm.LLMFamily(modelFamily): {
-			modelID: bedrockClient,
+			modelID: awsClient,
 		},
 	})
 

@@ -18,8 +18,8 @@ import (
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/executor"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/bedrock"
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/gpt"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/aws"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm/azure"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/prechecks"
 	"github.com/rs/zerolog"
@@ -392,7 +392,7 @@ func setupTestAPI(t *testing.T) *restful.Container {
 			t.Skip("Skipping real Bedrock integration - AWS_REGION or DEFAULT_MODEL_ID not set")
 		}
 
-		llmClient, err := bedrock.NewClient(ctx, region, modelID)
+		llmClient, err := aws.NewClient(ctx, region, modelID)
 		if err != nil {
 			t.Fatalf("Failed to create Bedrock client: %v", err)
 		}
@@ -417,7 +417,7 @@ func setupTestAPI(t *testing.T) *restful.Container {
 			t.Skip("Skipping real Azure OpenAI integration - OPEN_AI_KEY, OPEN_AI_MODEL_ID or AZURE_OPENAI_ENDPOINT not set")
 		}
 
-		llmClient, err := gpt.NewClient(apiKey, modelID, azureEndpoint)
+		llmClient, err := azure.NewClient(apiKey, modelID, azureEndpoint)
 		if err != nil {
 			t.Fatalf("Failed to create Azure OpenAI client: %v", err)
 		}

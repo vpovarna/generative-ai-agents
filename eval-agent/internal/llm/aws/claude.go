@@ -1,4 +1,4 @@
-package bedrock
+package aws
 
 import (
 	"context"

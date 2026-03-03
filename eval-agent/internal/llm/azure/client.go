@@ -1,4 +1,4 @@
-package gpt
+package azure
 
 import (
 	"fmt"
