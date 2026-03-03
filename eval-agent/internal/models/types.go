@@ -58,6 +58,7 @@ type StageResult struct {
 	Score    float64       `json:"score"`
 	Reason   string        `json:"reason"`
 	Duration time.Duration `json:"duration_ns"`
+	Weight   float64       `json:"weight,omitempty"` // Weight for this judge (0.0-1.0)
 }
 
 // Final output emitted to Kafka

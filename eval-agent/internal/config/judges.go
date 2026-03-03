@@ -29,6 +29,7 @@ type JudgeConfiguration struct {
 	RequiresExpectedOutput bool         `yaml:"requires_expected_output"` // For correctness evaluation
 	Prompt                 string       `yaml:"prompt"`
 	Model                  *ModelConfig `yaml:"model,omitempty"` // Optional override
+	Weight                 float64      `yaml:"weight,omitempty"` // Weight for this judge (0.0-1.0)
 }
 
 // ModelConfig defines LLM model parameters
@@ -110,6 +111,54 @@ func applyDefaults(cfg *JudgesConfig) {
 			}
 		}
 	}
+
+	// Normalize weights: if no weights set or don't sum to 1.0, distribute equally
+	normalizeJudgeWeights(cfg)
+}
+
+func normalizeJudgeWeights(cfg *JudgesConfig) {
+	// Count enabled judges and sum existing weights
+	enabledCount := 0
+	weightSum := 0.0
+	hasAnyWeight := false
+
+	for i := range cfg.Judges.Evaluators {
+		judge := &cfg.Judges.Evaluators[i]
+		if judge.Enabled {
+			enabledCount++
+			if judge.Weight > 0 {
+				hasAnyWeight = true
+				weightSum += judge.Weight
+			}
+		}
+	}
+
+	if enabledCount == 0 {
+		return
+	}
+
+	// If no weights specified, distribute equally
+	if !hasAnyWeight {
+		defaultWeight := 1.0 / float64(enabledCount)
+		for i := range cfg.Judges.Evaluators {
+			judge := &cfg.Judges.Evaluators[i]
+			if judge.Enabled {
+				judge.Weight = defaultWeight
+			}
+		}
+		return
+	}
+
+	// If weights don't sum to ~1.0, normalize them
+	const tolerance = 0.001
+	if weightSum < (1.0-tolerance) || weightSum > (1.0+tolerance) {
+		for i := range cfg.Judges.Evaluators {
+			judge := &cfg.Judges.Evaluators[i]
+			if judge.Enabled && judge.Weight > 0 {
+				judge.Weight = judge.Weight / weightSum
+			}
+		}
+	}
 }
 
 func (cfg *JudgesConfig) Validate() error {
@@ -153,6 +202,11 @@ func (cfg *JudgesConfig) Validate() error {
 			if judge.Model.Temperature < 0.0 || judge.Model.Temperature > 1.0 {
 				return fmt.Errorf("judge %s has invalid temperature: %f (must be 0.0-1.0)", judge.Name, judge.Model.Temperature)
 			}
+		}
+
+		// Validate weight (should be set by applyDefaults)
+		if judge.Enabled && (judge.Weight < 0.0 || judge.Weight > 1.0) {
+			return fmt.Errorf("judge %s has invalid weight: %f (must be 0.0-1.0)", judge.Name, judge.Weight)
 		}
 	}
 

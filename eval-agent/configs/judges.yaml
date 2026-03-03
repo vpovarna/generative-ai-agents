@@ -15,6 +15,7 @@ judges:
     # Relevance Judge: Evaluates if the answer addresses the query
     - name: relevance
       enabled: true
+      weight: 0.25
       description: "Evaluates if the answer addresses the query"
       requires_context: false
       prompt: |
@@ -33,6 +34,7 @@ judges:
     # Faithfulness Judge: Evaluates if answer is grounded in context (no hallucinations)
     - name: faithfulness
       enabled: true
+      weight: 0.20
       description: "Evaluates whether the answer is grounded in the provided context"
       requires_context: true
       prompt: |
@@ -53,6 +55,7 @@ judges:
     # Coherence Judge: Evaluates internal logical consistency
     - name: coherence
       enabled: true
+      weight: 0.15
       description: "Evaluates if the answer is internally logically consistent"
       requires_context: false
       prompt: |
@@ -72,6 +75,7 @@ judges:
     # Completeness Judge: Evaluates if answer fully addresses all parts of query
     - name: completeness
       enabled: true
+      weight: 0.20
       description: "Evaluates whether the answer fully addresses all parts of the query"
       requires_context: false
       prompt: |
@@ -98,6 +102,7 @@ judges:
     # Instruction Judge: Evaluates if answer follows explicit instructions
     - name: instruction
       enabled: true
+      weight: 0.15
       description: "Evaluates whether the answer follows explicit instructions in the query"
       requires_context: false
       prompt: |
@@ -136,6 +141,7 @@ judges:
     # Correctness Judge: Evaluates semantic match with expected output (ground truth)
     - name: correctness
       enabled: true
+      weight: 0.05
       description: "Evaluates semantic similarity between answer and expected output"
       requires_context: false
       requires_expected_output: true

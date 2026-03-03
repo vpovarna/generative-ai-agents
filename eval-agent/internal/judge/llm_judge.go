@@ -22,6 +22,7 @@ type LLMJudge struct {
 	modelConfig            config.ModelConfig
 	requiresContext        bool
 	requiresExpectedOutput bool
+	weight                 float64
 	llmClient              llm.LLMClient
 	logger                 *zerolog.Logger
 }
@@ -46,6 +47,7 @@ func NewLLMJudge(
 		modelConfig:            *judgeCfg.Model,
 		requiresContext:        judgeCfg.RequiresContext,
 		requiresExpectedOutput: judgeCfg.RequiresExpectedOutput,
+		weight:                 judgeCfg.Weight,
 		llmClient:              llmClient,
 		logger:                 logger,
 	}, nil
@@ -56,8 +58,9 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 	now := time.Now()
 
 	result := models.StageResult{
-		Name:  fmt.Sprintf("%s-judge", j.name),
-		Score: 0.0,
+		Name:   fmt.Sprintf("%s-judge", j.name),
+		Score:  0.0,
+		Weight: j.weight,
 	}
 
 	// Check if context is required but missing
